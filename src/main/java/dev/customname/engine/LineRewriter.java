@@ -259,10 +259,11 @@ public final class LineRewriter {
 
 	/**
 	 * Chat-facing rewrite: the same three steps as {@link #rewrite}, tuned for chat
-	 * lines. Name mentions are swapped without dragging the prefix into the middle
-	 * of someone else's sentence, the SkyBlock level tag is only spoofed in the
-	 * sender header, and the donor rank is swapped or inserted in the header only,
-	 * exactly like the tab list.
+	 * lines. The local player's sender header is normalised first — decorative
+	 * emblem glyphs are collapsed — then name mentions are swapped without dragging
+	 * the prefix into someone else's sentence, the SkyBlock level tag is spoofed in
+	 * (swapped, or inserted when the server line has none), and the donor rank is
+	 * swapped or inserted in the header only, exactly like the tab list.
 	 */
 	public static Component rewriteChat(Component original, String username, NameConfig config) {
 		if (original == null || username == null || username.isBlank()) {
@@ -276,7 +277,7 @@ public final class LineRewriter {
 			return original;
 		}
 
-		Component result = original;
+		Component result = stripHeaderEmblems(original, username, config);
 		if (custom) {
 			result = Segments.replaceAll(result, Identity.wordPattern(username), () -> NameStyler.name(username, config, false));
 		}
@@ -290,6 +291,66 @@ public final class LineRewriter {
 		}
 
 		return result;
+	}
+
+	/**
+	 * Removes equipped emblem glyphs from the local player's own sender header by
+	 * collapsing the gaps between header elements (level tag, rank tag, name) to a
+	 * single space. Anything that is not whitespace in those gaps is decorative.
+	 * Other players' lines and non-sender mentions are left untouched.
+	 */
+	private static Component stripHeaderEmblems(Component original, String username, NameConfig config) {
+		if (original == null) {
+			return original;
+		}
+
+		String plain = original.getString();
+		int[] name = findName(plain, username, config);
+		if (name == null || !isSenderPosition(plain, name[0])) {
+			return original;
+		}
+
+		Component result = original;
+		int[] rank = findRankBefore(plain, name[0]);
+
+		// Gap between the rank tag and the name: "… [MVP+] ♦ Steve" -> "… [MVP+] Steve".
+		if (rank != null && !onlyWhitespaceBetween(plain, rank[1], name[0])) {
+			result = Segments.replaceRange(result, rank[1], name[0], Component.literal(" "));
+		}
+
+		// Gap between the level tag and the rank (or the name when no rank):
+		// "[42] ♦ [MVP+] Steve" -> "[42] [MVP+] Steve".
+		plain = result.getString();
+		name = findName(plain, username, config);
+		if (name == null) {
+			return result;
+		}
+
+		rank = findRankBefore(plain, name[0]);
+		int headerEnd = rank != null ? rank[0] : name[0];
+		Matcher levelMatcher = SKYBLOCK_LEVEL.matcher(plain);
+		int levelEnd = -1;
+		while (levelMatcher.find()) {
+			if (levelMatcher.end() <= headerEnd && noLettersOrDigitsBetween(plain, levelMatcher.end(), headerEnd)) {
+				levelEnd = levelMatcher.end();
+			}
+		}
+
+		if (levelEnd >= 0 && !onlyWhitespaceBetween(plain, levelEnd, headerEnd)) {
+			result = Segments.replaceRange(result, levelEnd, headerEnd, Component.literal(" "));
+		}
+
+		return result;
+	}
+
+	private static boolean onlyWhitespaceBetween(String text, int from, int to) {
+		for (int i = from; i < to; i++) {
+			if (!Character.isWhitespace(text.charAt(i))) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	/**
@@ -332,7 +393,20 @@ public final class LineRewriter {
 		}
 
 		if (start < 0) {
-			return original;
+			// No level tag in the header. When the local player is the sender, insert
+			// one before the rank (or the name) so the spoof still shows in chat;
+			// lines that merely mention the local player gain nothing.
+			if (!isSenderPosition(plain, name[0])) {
+				return original;
+			}
+
+			MutableComponent tag = Component.empty().append(SkyblockLevels.buildLevelTag(Integer.parseInt(text)));
+			boolean spaceFollows = headerEnd < plain.length() && Character.isWhitespace(plain.charAt(headerEnd));
+			if (!spaceFollows) {
+				tag.append(Component.literal(" "));
+			}
+
+			return Segments.replaceRange(original, headerEnd, headerEnd, tag);
 		}
 
 		return Segments.replaceRange(original, start, end, SkyblockLevels.buildLevelTag(Integer.parseInt(text)));
