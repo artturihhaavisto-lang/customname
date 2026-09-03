@@ -224,6 +224,13 @@ public class AppearanceScreen extends Screen {
       );
       ly += rowH;
       this.addRenderableWidget(
+         new ToggleRow(x, ly, leftW, "Show rank in tab list", this.draft.showRankInTab, v -> {
+            this.draft.showRankInTab = v;
+            this.refreshPreview();
+         }).tooltip("Off: the tab list shows no rank tag at all (your real one is removed, no prefix added). Chat and name tags keep the rank.")
+      );
+      ly += rowH;
+      this.addRenderableWidget(
          new ToggleRow(x, ly, leftW, "Spoof Skyblock level", this.draft.spoofSkyblockLevel, v -> {
             this.draft.spoofSkyblockLevel = v;
             this.refreshPreview();

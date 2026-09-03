@@ -43,6 +43,12 @@ public final class TabDisplayRewriter {
 		return rewrite(original, NameConfig.get());
 	}
 
+	/** Tab-list entry point: hides the rank entirely unless showRankInTab is on. */
+	public static Component rewriteForTab(Component original) {
+		NameConfig config = NameConfig.get();
+		return LineRewriter.rewrite(original, Identity.username(), config, true, true, !config.showRankInTab);
+	}
+
 	public static Component rewrite(Component original, NameConfig config) {
 		return LineRewriter.rewrite(original, Identity.username(), config, true, true);
 	}

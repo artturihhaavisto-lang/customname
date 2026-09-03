@@ -22,7 +22,7 @@ public class PlayerTabOverlayMixin {
    private void customname$onGetNameForDisplay(PlayerInfo entry, CallbackInfoReturnable<Component> cir) {
       Component original = (Component)cir.getReturnValue();
       if (TabDisplayRewriter.appliesTo(entry, original)) {
-         Component rewritten = TabDisplayRewriter.rewrite(original);
+         Component rewritten = TabDisplayRewriter.rewriteForTab(original);
          if (entry.getGameMode() == GameType.SPECTATOR && rewritten instanceof MutableComponent mutable) {
             rewritten = mutable.copy().withStyle(ChatFormatting.ITALIC);
          }

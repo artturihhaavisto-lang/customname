@@ -44,23 +44,32 @@ public final class LineRewriter {
 	 * @param animated when true chroma colours are sampled from the current clock.
 	 */
 	public static Component rewrite(Component original, String username, NameConfig config, boolean applyCustomName, boolean animated) {
+		return rewrite(original, username, config, applyCustomName, animated, false);
+	}
+
+	/**
+	 * @param hideRank when true no prefix is added and any real rank tag is
+	 *     removed from the local player's header — used for the tab list, where
+	 *     the rank can be turned off independently of chat and name tags.
+	 */
+	public static Component rewrite(Component original, String username, NameConfig config, boolean applyCustomName, boolean animated, boolean hideRank) {
 		if (username == null || username.isBlank()) {
 			return original;
 		}
 
 		boolean custom = applyCustomName && config.hasCustomDisplay();
-		boolean rank = config.hasRankSpoof();
+		boolean rank = !hideRank && config.hasRankSpoof();
 		boolean level = config.hasLevelSpoof();
-		if (!custom && !rank && !level) {
+		if (!custom && !rank && !level && !hideRank) {
 			return original;
 		}
 
 		if (original == null) {
-			return custom ? NameStyler.full(username, config, animated) : null;
+			return custom ? (hideRank ? NameStyler.name(username, config, animated) : NameStyler.full(username, config, animated)) : null;
 		}
 
 		if (custom && !rank && !level && isBareName(original, username, config)) {
-			return NameStyler.full(username, config, animated);
+			return hideRank ? NameStyler.name(username, config, animated) : NameStyler.full(username, config, animated);
 		}
 
 		Component result = original;
@@ -75,9 +84,40 @@ public final class LineRewriter {
 
 		if (rank) {
 			result = replaceRank(result, username, config, animated);
+		} else if (hideRank) {
+			result = stripRankTag(result, username, config);
 		}
 
 		return result;
+	}
+
+	/**
+	 * Removes the real donor rank tag (and one following space) from the local
+	 * player's header without touching anything else — the tab-list form of rank
+	 * handling when {@code showRankInTab} is off.
+	 */
+	static Component stripRankTag(Component original, String username, NameConfig config) {
+		if (original == null) {
+			return original;
+		}
+
+		String plain = original.getString();
+		int[] name = findName(plain, username, config);
+		if (name == null) {
+			return original;
+		}
+
+		int[] rank = findRankBefore(plain, name[0]);
+		if (rank == null) {
+			return original;
+		}
+
+		int end = rank[1];
+		if (end < plain.length() && Character.isWhitespace(plain.charAt(end))) {
+			end++;
+		}
+
+		return Segments.replaceRange(original, rank[0], end, Component.empty());
 	}
 
 	public static Component replaceLevel(Component original, NameConfig config) {
