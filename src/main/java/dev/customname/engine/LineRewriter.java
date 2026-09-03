@@ -146,10 +146,11 @@ public final class LineRewriter {
 	}
 
 	/**
-	 * Plain text with invisible characters removed (format characters: zero-width
-	 * spaces, word joiners, BOMs — Hypixel buries them inside styled tags) and
-	 * NBSPs converted to plain spaces, plus an index map back to the original
-	 * string so matches can be applied to the original component.
+	 * Plain text with matching noise removed — invisible characters (zero-width
+	 * spaces, word joiners, BOMs), legacy formatting code sequences
+	 * ({@code §b}, {@code §l}, … which Hypixel embeds directly in the text of
+	 * some lines) and NBSPs converted to plain spaces — plus an index map back to
+	 * the original string so matches can be applied to the original component.
 	 */
 	private record Norm(String text, int[] toOriginal, int[] toNormalized) {
 		static Norm of(String plain) {
@@ -160,6 +161,13 @@ public final class LineRewriter {
 				char c = plain.charAt(i);
 				if (isInvisible(c)) {
 					toNormalized[i] = -1;
+					continue;
+				}
+
+				if (c == '§' && i + 1 < plain.length() && isFormatCode(plain.charAt(i + 1))) {
+					toNormalized[i] = -1;
+					toNormalized[i + 1] = -1;
+					i++;
 					continue;
 				}
 
@@ -174,6 +182,10 @@ public final class LineRewriter {
 
 		static boolean isInvisible(char c) {
 			return Character.getType(c) == Character.FORMAT || c == '\u200B' || c == '\u2060' || c == '\uFEFF';
+		}
+
+		static boolean isFormatCode(char c) {
+			return "0123456789abcdefklmnorABCDEFKLMNOR".indexOf(c) >= 0;
 		}
 
 		/** Original offset of a normalized index; the end sentinel maps to plain.length(). */
