@@ -217,6 +217,13 @@ public class AppearanceScreen extends Screen {
       );
       ly += rowH;
       this.addRenderableWidget(
+         new ToggleRow(x, ly, leftW, "Name color matches rank", this.draft.nameMatchesRankColor, v -> {
+            this.draft.nameMatchesRankColor = v;
+            this.refreshPreview();
+         }).tooltip("Color the custom name after the rank prefix: the rank letter color, or the same gradient when the prefix uses chroma.")
+      );
+      ly += rowH;
+      this.addRenderableWidget(
          new ToggleRow(x, ly, leftW, "Spoof Skyblock level", this.draft.spoofSkyblockLevel, v -> {
             this.draft.spoofSkyblockLevel = v;
             this.refreshPreview();
