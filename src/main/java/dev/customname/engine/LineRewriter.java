@@ -413,17 +413,23 @@ public final class LineRewriter {
 	}
 
 	/**
-	 * Decorative glyphs (SkyBlock puts a {@code ♦} between the level tag and the
-	 * rank) may separate the level tag from the header, but real words may not.
+	 * Decorative glyphs (SkyBlock emblems — runes like {@code ᛝ}, ♦, ✧, …) may
+	 * separate the level tag from the header, but real words may not. Hypixel
+	 * names, ranks and level tags are plain ASCII, so only ASCII alphanumerics
+	 * count as content; Unicode symbol characters are emblems.
 	 */
 	private static boolean noLettersOrDigitsBetween(String text, int from, int to) {
 		for (int i = from; i < to; i++) {
-			if (Character.isLetterOrDigit(text.charAt(i))) {
+			if (isAsciiLetterOrDigit(text.charAt(i))) {
 				return false;
 			}
 		}
 
 		return true;
+	}
+
+	private static boolean isAsciiLetterOrDigit(int cp) {
+		return cp >= 'a' && cp <= 'z' || cp >= 'A' && cp <= 'Z' || cp >= '0' && cp <= '9';
 	}
 
 	/**
