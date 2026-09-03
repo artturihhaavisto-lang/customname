@@ -1,12 +1,13 @@
 package dev.customname.util;
 
 import dev.customname.config.NameConfig;
+import dev.customname.engine.Identity;
+import dev.customname.engine.LineRewriter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.network.chat.Component;
-import org.slf4j.LoggerFactory;
 
 public final class NameTagFromTab {
 	private NameTagFromTab() {
@@ -32,16 +33,14 @@ public final class NameTagFromTab {
 			return null;
 		}
 
-		boolean self = mc.isLocalPlayer(player.getUUID());
-
-		if (self) {
-			Component rewritten = TabDisplayRewriter.rewrite(raw);
-			LoggerFactory.getLogger("customname").info(
-				"nametag raw=[{}] rewritten=[{}] same={}",
-				raw.getString(),
-				rewritten != null ? rewritten.getString() : "null",
-				rewritten == raw
-			);
+		if (mc.isLocalPlayer(player.getUUID())) {
+			// The own name tag is the sender header floating over your head: run
+			// it through the same chat rewrite (emblem stripped, level spoofed on
+			// SkyBlock only, rank replaced, custom name applied).
+			String username = Identity.username();
+			Component rewritten = username == null
+				? null
+				: LineRewriter.rewriteChat(raw, username, NameConfig.get());
 			return rewritten != null ? rewritten : raw;
 		}
 
