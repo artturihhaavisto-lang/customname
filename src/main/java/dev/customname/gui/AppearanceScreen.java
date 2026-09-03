@@ -217,13 +217,6 @@ public class AppearanceScreen extends Screen {
       );
       ly += rowH;
       this.addRenderableWidget(
-         new ToggleRow(x, ly, leftW, "Replace rank tag with prefix", this.draft.replaceLevelWithPrefix, v -> {
-            this.draft.replaceLevelWithPrefix = v;
-            this.refreshPreview();
-         }).tooltip("Replace your Hypixel rank tag with your prefix. Level and emblem stay.")
-      );
-      ly += rowH;
-      this.addRenderableWidget(
          new ToggleRow(x, ly, leftW, "Spoof Skyblock level", this.draft.spoofSkyblockLevel, v -> {
             this.draft.spoofSkyblockLevel = v;
             this.refreshPreview();
@@ -642,7 +635,11 @@ public class AppearanceScreen extends Screen {
 
          skyblock.append(SkyblockLevels.buildLevelTag(level));
          skyblock.append(Component.literal(" "));
+<<<<<<< HEAD
          if (this.draft.replaceLevelWithPrefix && this.draft.prefix != null && !this.draft.prefix.isBlank()) {
+=======
+         if (this.draft.prefixEnabled && this.draft.prefix != null && !this.draft.prefix.isBlank()) {
+>>>>>>> 5e5fb64 (v1.2.5: prefix now replaces the Hypixel rank tag automatically)
             skyblock.append(DisplayNameBuilder.buildPrefix(this.draft));
          } else {
             skyblock.append(Component.literal("[MVP+]").withStyle(Style.EMPTY.withColor(TextColor.fromRgb(43690))));
