@@ -72,7 +72,7 @@ public final class LineRewriter {
 			return hideRank ? NameStyler.name(username, config, animated) : NameStyler.full(username, config, animated);
 		}
 
-		Component result = original;
+		Component result = stripHeaderEmblems(original, username, config);
 		if (custom) {
 			result = Segments.replaceAll(result, Identity.wordPattern(username), () -> NameStyler.name(username, config, animated));
 		}
@@ -455,6 +455,39 @@ public final class LineRewriter {
 
 		if (levelEnd >= 0 && !onlyWhitespaceBetween(plain, levelEnd, headerEnd)) {
 			result = Segments.replaceRange(result, levelEnd, headerEnd, Component.literal(" "));
+		}
+
+		// Trailing emblem: tab rows and name tags put the emblem AFTER the name
+		// ("[228] [MVP+] h_up ᛝ"), unlike chat which puts it before the rank.
+		// Strip everything between the name and the end of the header (a ':' ends
+		// the header in chat) when it is only whitespace and emblem glyphs.
+		plain = result.getString();
+		name = findName(plain, username, config);
+		if (name == null) {
+			return result;
+		}
+
+		int lineEnd = plain.length();
+		int colon = plain.indexOf(':', name[1]);
+		if (colon >= 0) {
+			lineEnd = colon;
+		}
+
+		boolean hasEmblem = false;
+		for (int i = name[1]; i < lineEnd; i++) {
+			char c = plain.charAt(i);
+			if (isAsciiLetterOrDigit(c)) {
+				hasEmblem = false;
+				break;
+			}
+
+			if (!Character.isWhitespace(c)) {
+				hasEmblem = true;
+			}
+		}
+
+		if (hasEmblem) {
+			result = Segments.replaceRange(result, name[1], lineEnd, Component.empty());
 		}
 
 		return result;
