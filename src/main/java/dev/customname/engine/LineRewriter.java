@@ -23,7 +23,7 @@ import net.minecraft.world.scores.Objective;
 public final class LineRewriter {
 	public static final Pattern SKYBLOCK_LEVEL = Pattern.compile("\\[\\d{1,5}]");
 	private static final Pattern DONOR_RANK = Pattern.compile(
-		"\\[(?:VIP\\+|VIP|MVP\\+\\+|MVP\\+|MVP|YOUTUBE|ADMIN|GM|MOD|HELPER|OWNER|PIG\\+\\+\\+|PIG\\+\\+|PIG\\+|PIG)\\]",
+		"\\[\\s*(?:VIP\\+|VIP|MVP\\+\\+|MVP\\+|MVP|YOUTUBE|ADMIN|GM|MOD|HELPER|OWNER|PIG\\+\\+\\+|PIG\\+\\+|PIG\\+|PIG)\\s*\\]",
 		Pattern.CASE_INSENSITIVE
 	);
 
@@ -123,6 +123,14 @@ public final class LineRewriter {
 			return original;
 		}
 
+		if (rank == null) {
+			// Sender line without a recognisable rank tag. Log the exact characters
+			// so unexpected server formatting can be diagnosed from latest.log.
+			dev.customname.CustomNameClient.LOGGER.info(
+				"[CustomName/debug] no rank tag in sender line: {}", escapeForLog(plain)
+			);
+		}
+
 		int start = rank == null ? name[0] : rank[0];
 		int end = rank == null ? name[0] : rank[1];
 
@@ -138,10 +146,62 @@ public final class LineRewriter {
 	}
 
 	/**
+	 * Plain text with invisible characters removed (format characters: zero-width
+	 * spaces, word joiners, BOMs — Hypixel buries them inside styled tags) and
+	 * NBSPs converted to plain spaces, plus an index map back to the original
+	 * string so matches can be applied to the original component.
+	 */
+	private record Norm(String text, int[] toOriginal, int[] toNormalized) {
+		static Norm of(String plain) {
+			StringBuilder sb = new StringBuilder(plain.length());
+			int[] toOriginal = new int[plain.length() + 1];
+			int[] toNormalized = new int[plain.length()];
+			for (int i = 0; i < plain.length(); i++) {
+				char c = plain.charAt(i);
+				if (isInvisible(c)) {
+					toNormalized[i] = -1;
+					continue;
+				}
+
+				toNormalized[i] = sb.length();
+				toOriginal[sb.length()] = i;
+				sb.append(c == '\u00A0' || c == '\u202F' ? ' ' : c);
+			}
+
+			toOriginal[sb.length()] = plain.length();
+			return new Norm(sb.toString(), toOriginal, toNormalized);
+		}
+
+		static boolean isInvisible(char c) {
+			return Character.getType(c) == Character.FORMAT || c == '\u200B' || c == '\u2060' || c == '\uFEFF';
+		}
+
+		/** Original offset of a normalized index; the end sentinel maps to plain.length(). */
+		int original(int normalizedIndex) {
+			return toOriginal[normalizedIndex];
+		}
+
+		/** Normalized index for an original offset that points at a kept character. */
+		int normalized(int originalIndex) {
+			return toNormalized[originalIndex];
+		}
+	}
+
+	/**
 	 * Locates the local player's name. A chat-sender match ("Name:") wins, then the
 	 * first match in the header before ':', then the last match anywhere.
 	 */
 	static int[] findName(String plain, String username, NameConfig config) {
+		if (plain == null || plain.isBlank()) {
+			return null;
+		}
+
+		Norm norm = Norm.of(plain);
+		int[] range = findNameNormalized(norm.text(), username, config);
+		return range == null ? null : new int[]{norm.original(range[0]), norm.original(range[1])};
+	}
+
+	private static int[] findNameNormalized(String plain, String username, NameConfig config) {
 		if (plain == null || plain.isBlank()) {
 			return null;
 		}
@@ -177,18 +237,20 @@ public final class LineRewriter {
 	 * check a line like "[MVP++] Dinnerbone: hi Notch" would steal the other player's rank.
 	 */
 	private static int[] findRankBefore(String plain, int nameStart) {
-		Matcher matcher = DONOR_RANK.matcher(plain);
+		Norm norm = Norm.of(plain);
+		int normalizedNameStart = norm.normalized(nameStart);
+		Matcher matcher = DONOR_RANK.matcher(norm.text());
 		int start = -1;
 		int end = -1;
 
 		while (matcher.find()) {
-			if (matcher.end() <= nameStart && noLettersOrDigitsBetween(plain, matcher.end(), nameStart)) {
+			if (matcher.end() <= normalizedNameStart && noLettersOrDigitsBetween(norm.text(), matcher.end(), normalizedNameStart)) {
 				start = matcher.start();
 				end = matcher.end();
 			}
 		}
 
-		return start < 0 ? null : new int[]{start, end};
+		return start < 0 ? null : new int[]{norm.original(start), norm.original(end)};
 	}
 
 	/**
@@ -385,11 +447,13 @@ public final class LineRewriter {
 			headerEnd = rank[0];
 		}
 
-		Matcher matcher = SKYBLOCK_LEVEL.matcher(plain);
+		Norm norm = Norm.of(plain);
+		int normalizedHeaderEnd = norm.normalized(headerEnd);
+		Matcher matcher = SKYBLOCK_LEVEL.matcher(norm.text());
 		int start = -1;
 		int end = -1;
 		while (matcher.find()) {
-			if (matcher.end() <= headerEnd && noLettersOrDigitsBetween(plain, matcher.end(), headerEnd)) {
+			if (matcher.end() <= normalizedHeaderEnd && noLettersOrDigitsBetween(norm.text(), matcher.end(), normalizedHeaderEnd)) {
 				start = matcher.start();
 				end = matcher.end();
 			}
@@ -412,7 +476,7 @@ public final class LineRewriter {
 			return Segments.replaceRange(original, headerEnd, headerEnd, tag);
 		}
 
-		return Segments.replaceRange(original, start, end, SkyblockLevels.buildLevelTag(Integer.parseInt(text)));
+		return Segments.replaceRange(original, norm.original(start), norm.original(end), SkyblockLevels.buildLevelTag(Integer.parseInt(text)));
 	}
 
 	/**
@@ -433,6 +497,21 @@ public final class LineRewriter {
 
 	private static boolean isAsciiLetterOrDigit(int cp) {
 		return cp >= 'a' && cp <= 'z' || cp >= 'A' && cp <= 'Z' || cp >= '0' && cp <= '9';
+	}
+
+	/** Renders a string with every non-ASCII character escaped, for debug logging. */
+	private static String escapeForLog(String s) {
+		StringBuilder sb = new StringBuilder(s.length() + 16);
+		for (int i = 0; i < s.length(); i++) {
+			char c = s.charAt(i);
+			if (c >= 32 && c <= 126) {
+				sb.append(c);
+			} else {
+				sb.append(String.format("\\u%04X", (int)c));
+			}
+		}
+
+		return sb.toString();
 	}
 
 	/**
