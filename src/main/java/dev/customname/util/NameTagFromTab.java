@@ -44,32 +44,48 @@ public final class NameTagFromTab {
 			return null;
 		}
 
+		boolean self = mc.isLocalPlayer(player.getUUID());
 		PlayerInfo info = connection.getPlayerInfo(player.getUUID());
-		if (info == null) {
+		Component raw = info == null ? null : info.getTabListDisplayName();
+		if (raw != null && raw.getString().isBlank()) {
+			raw = null;
+		}
+
+		if (!self) {
+			return raw;
+		}
+
+		// The own name tag is the sender header floating over your head: run
+		// it through the same chat rewrite (emblem stripped, level spoofed on
+		// SkyBlock only, rank replaced, custom name applied).
+		String username = Identity.username();
+		NameConfig config = NameConfig.get();
+		Component base = raw;
+		if (base == null && username != null
+			&& (config.hasCustomDisplay() || config.hasRankSpoof() || config.hasLevelSpoof())) {
+			// 1.3.4/1.3.5 field logs showed the server never sends a tab-list
+			// display name for the player's OWN entry (fallback fired for whole
+			// sessions, the self branch never ran), so building the own tag
+			// from tab data can never succeed on Hypixel. Synthesize the bare
+			// sender header instead: rewriteChat inserts the level tag (only
+			// on SkyBlock) and the prefix exactly as it does for chat lines,
+			// yielding "[level] [prefix] name" over your own head.
+			base = Component.literal(username);
+		}
+
+		if (base == null) {
 			return null;
 		}
 
-		Component raw = info.getTabListDisplayName();
-		if (raw == null || raw.getString().isBlank()) {
-			return null;
-		}
-
-		if (mc.isLocalPlayer(player.getUUID())) {
-			// The own name tag is the sender header floating over your head: run
-			// it through the same chat rewrite (emblem stripped, level spoofed on
-			// SkyBlock only, rank replaced, custom name applied).
-			String username = Identity.username();
-			Component rewritten = username == null
-				? null
-				: LineRewriter.rewriteChat(raw, username, NameConfig.get());
-			Component out = rewritten != null ? rewritten : raw;
-			debugNametag("self",
-				"raw", LineRewriter.escapeForLog(raw.getString()),
-				"out", LineRewriter.escapeForLog(out.getString()));
-			return out;
-		}
-
-		return raw;
+		Component rewritten = username == null
+			? null
+			: LineRewriter.rewriteChat(base, username, config);
+		Component out = rewritten != null ? rewritten : base;
+		debugNametag("self",
+			"src", raw == null ? "synth" : "tab",
+			"raw", LineRewriter.escapeForLog(base.getString()),
+			"out", LineRewriter.escapeForLog(out.getString()));
+		return out;
 	}
 
 	public static boolean isHidden(AbstractClientPlayer player) {
