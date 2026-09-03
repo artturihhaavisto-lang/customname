@@ -642,7 +642,6 @@ public class AppearanceScreen extends Screen {
 
          skyblock.append(SkyblockLevels.buildLevelTag(level));
          skyblock.append(Component.literal(" "));
-         skyblock.append(Component.literal("\u2666 ").withStyle(Style.EMPTY.withColor(TextColor.fromRgb(15254378))));
          if (this.draft.replaceLevelWithPrefix && this.draft.prefix != null && !this.draft.prefix.isBlank()) {
             skyblock.append(DisplayNameBuilder.buildPrefix(this.draft));
          } else {

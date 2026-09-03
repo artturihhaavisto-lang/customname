@@ -21,7 +21,7 @@ import net.minecraft.world.scores.Objective;
  * given, so offsets are always consistent with the text being edited.
  */
 public final class LineRewriter {
-	public static final Pattern SKYBLOCK_LEVEL = Pattern.compile("\\[\\d{1,4}]");
+	public static final Pattern SKYBLOCK_LEVEL = Pattern.compile("\\[\\d{1,5}]");
 	private static final Pattern DONOR_RANK = Pattern.compile(
 		"\\[(?:VIP\\+|VIP|MVP\\+\\+|MVP\\+|MVP|YOUTUBE|ADMIN|GM|MOD|HELPER|OWNER|PIG\\+\\+\\+|PIG\\+\\+|PIG\\+|PIG)\\]",
 		Pattern.CASE_INSENSITIVE
@@ -171,8 +171,9 @@ public final class LineRewriter {
 
 	/**
 	 * The last donor rank tag that belongs to the local player: it must end before the
-	 * name and be separated from it only by whitespace. Without the adjacency check a
-	 * line like "[MVP++] Dinnerbone: hi Notch" would steal the other player's rank.
+	 * name and be separated from it only by whitespace or decorative glyphs (a
+	 * SkyBlock emblem can sit between the rank and the name). Without the adjacency
+	 * check a line like "[MVP++] Dinnerbone: hi Notch" would steal the other player's rank.
 	 */
 	private static int[] findRankBefore(String plain, int nameStart) {
 		Matcher matcher = DONOR_RANK.matcher(plain);
@@ -180,23 +181,13 @@ public final class LineRewriter {
 		int end = -1;
 
 		while (matcher.find()) {
-			if (matcher.end() <= nameStart && onlyWhitespaceBetween(plain, matcher.end(), nameStart)) {
+			if (matcher.end() <= nameStart && noLettersOrDigitsBetween(plain, matcher.end(), nameStart)) {
 				start = matcher.start();
 				end = matcher.end();
 			}
 		}
 
 		return start < 0 ? null : new int[]{start, end};
-	}
-
-	private static boolean onlyWhitespaceBetween(String text, int from, int to) {
-		for (int i = from; i < to; i++) {
-			if (!Character.isWhitespace(text.charAt(i))) {
-				return false;
-			}
-		}
-
-		return true;
 	}
 
 	/**
@@ -221,14 +212,14 @@ public final class LineRewriter {
 		return text != null && !text.isBlank() && Identity.wordPattern(username).matcher(text).find();
 	}
 
-	/** Normalises the user's level input to a plain 1-4 digit number, or null. */
+	/** Normalises the user's level input to a plain 1-5 digit number, or null. */
 	public static String formatLevel(String raw) {
 		if (raw == null) {
 			return null;
 		}
 
 		String digits = raw.trim().replaceAll("[^0-9]", "");
-		if (digits.isEmpty() || digits.length() > 4) {
+		if (digits.isEmpty() || digits.length() > 5) {
 			return null;
 		}
 
