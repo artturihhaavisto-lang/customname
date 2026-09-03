@@ -68,7 +68,8 @@ public final class LineRewriter {
 			result = Segments.replaceAll(result, Identity.wordPattern(username), () -> NameStyler.name(username, config, animated));
 		}
 
-		if (level) {
+		// Level tags are a SkyBlock concept; never spoof them elsewhere.
+		if (level && inSkyblock()) {
 			result = replaceLevel(result, config);
 		}
 
@@ -282,7 +283,9 @@ public final class LineRewriter {
 			result = Segments.replaceAll(result, Identity.wordPattern(username), () -> NameStyler.name(username, config, false));
 		}
 
-		if (level) {
+		// The [N] level tag only exists on SkyBlock; spoofing it anywhere else
+		// (Hypixel lobbies, other games) would fabricate a tag that is not there.
+		if (level && inSkyblock()) {
 			result = replaceChatLevel(result, config, username);
 		}
 
