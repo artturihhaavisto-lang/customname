@@ -8,9 +8,30 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.network.chat.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class NameTagFromTab {
+	private static final Logger LOG = LoggerFactory.getLogger("customname");
+	private static long lastDebugLog;
+
 	private NameTagFromTab() {
+	}
+
+	/** Throttled pipeline logging (max one line per 10s) for nametag diagnosis. */
+	public static void debugNametag(String label, Object... parts) {
+		long now = System.currentTimeMillis();
+		if (now - lastDebugLog < 10_000L) {
+			return;
+		}
+
+		lastDebugLog = now;
+		StringBuilder sb = new StringBuilder("nametag ").append(label);
+		for (int i = 0; i + 1 < parts.length; i += 2) {
+			sb.append(' ').append(parts[i]).append("=[").append(parts[i + 1]).append(']');
+		}
+
+		LOG.info("[CustomName/debug] {}", sb);
 	}
 
 	public static void invalidateCache() {
@@ -41,7 +62,11 @@ public final class NameTagFromTab {
 			Component rewritten = username == null
 				? null
 				: LineRewriter.rewriteChat(raw, username, NameConfig.get());
-			return rewritten != null ? rewritten : raw;
+			Component out = rewritten != null ? rewritten : raw;
+			debugNametag("self",
+				"raw", LineRewriter.escapeForLog(raw.getString()),
+				"out", LineRewriter.escapeForLog(out.getString()));
+			return out;
 		}
 
 		return raw;
