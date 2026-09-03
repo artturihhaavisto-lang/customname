@@ -267,6 +267,101 @@ public final class LineRewriter {
 	}
 
 	/**
+	 * Chat-facing rewrite: the same three steps as {@link #rewrite}, tuned for chat
+	 * lines. Name mentions are swapped without dragging the prefix into the middle
+	 * of someone else's sentence, the SkyBlock level tag is only spoofed in the
+	 * sender header, and the donor rank is swapped or inserted in the header only,
+	 * exactly like the tab list.
+	 */
+	public static Component rewriteChat(Component original, String username, NameConfig config) {
+		if (original == null || username == null || username.isBlank()) {
+			return original;
+		}
+
+		boolean custom = config.hasCustomDisplay();
+		boolean rank = config.hasRankSpoof();
+		boolean level = config.hasLevelSpoof();
+		if (!custom && !rank && !level) {
+			return original;
+		}
+
+		Component result = original;
+		if (custom) {
+			result = Segments.replaceAll(result, Identity.wordPattern(username), () -> NameStyler.name(username, config, false));
+		}
+
+		if (level) {
+			result = replaceChatLevel(result, config, username);
+		}
+
+		if (rank) {
+			result = replaceRank(result, username, config, false);
+		}
+
+		return result;
+	}
+
+	/**
+	 * Level spoof for chat: only the {@code [N]} tag that belongs to the sender
+	 * header — sitting directly before the rank or the name — is swapped, so
+	 * numbers in brackets inside the message body are left alone.
+	 */
+	private static Component replaceChatLevel(Component original, NameConfig config, String username) {
+		if (original == null) {
+			return original;
+		}
+
+		String text = formatLevel(config.spoofSkyblockLevelValue);
+		if (text == null) {
+			return original;
+		}
+
+		String plain = original.getString();
+		int[] name = findName(plain, username, config);
+		if (name == null) {
+			return original;
+		}
+
+		// The header ends where the rank tag begins when one is present, so a
+		// spoofed level never replaces a bracketed number further back in the line.
+		int headerEnd = name[0];
+		int[] rank = findRankBefore(plain, name[0]);
+		if (rank != null) {
+			headerEnd = rank[0];
+		}
+
+		Matcher matcher = SKYBLOCK_LEVEL.matcher(plain);
+		int start = -1;
+		int end = -1;
+		while (matcher.find()) {
+			if (matcher.end() <= headerEnd && noLettersOrDigitsBetween(plain, matcher.end(), headerEnd)) {
+				start = matcher.start();
+				end = matcher.end();
+			}
+		}
+
+		if (start < 0) {
+			return original;
+		}
+
+		return Segments.replaceRange(original, start, end, SkyblockLevels.buildLevelTag(Integer.parseInt(text)));
+	}
+
+	/**
+	 * Decorative glyphs (SkyBlock puts a {@code ♦} between the level tag and the
+	 * rank) may separate the level tag from the header, but real words may not.
+	 */
+	private static boolean noLettersOrDigitsBetween(String text, int from, int to) {
+		for (int i = from; i < to; i++) {
+			if (Character.isLetterOrDigit(text.charAt(i))) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
 	 * Simple chat name replacement: replaces every occurrence of the username
 	 * (and custom name if configured) with the full custom display name.
 	 */
