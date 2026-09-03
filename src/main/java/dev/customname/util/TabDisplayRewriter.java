@@ -43,10 +43,16 @@ public final class TabDisplayRewriter {
 		return rewrite(original, NameConfig.get());
 	}
 
-	/** Tab-list entry point: hides the rank entirely unless showRankInTab is on. */
+	/**
+	 * Tab-list entry point. The rank is hidden only on SkyBlock (where the level
+	 * tag + name is the clean style); everywhere else — lobbies and other games —
+	 * the tab shows the rank as usual. {@code showRankInTab} forces it on
+	 * everywhere.
+	 */
 	public static Component rewriteForTab(Component original) {
 		NameConfig config = NameConfig.get();
-		return LineRewriter.rewrite(original, Identity.username(), config, true, true, !config.showRankInTab);
+		boolean hideRank = !config.showRankInTab && LineRewriter.inSkyblock();
+		return LineRewriter.rewrite(original, Identity.username(), config, true, true, hideRank);
 	}
 
 	public static Component rewrite(Component original, NameConfig config) {

@@ -227,7 +227,7 @@ public class AppearanceScreen extends Screen {
          new ToggleRow(x, ly, leftW, "Show rank in tab list", this.draft.showRankInTab, v -> {
             this.draft.showRankInTab = v;
             this.refreshPreview();
-         }).tooltip("Off: the tab list shows no rank tag at all (your real one is removed, no prefix added). Chat and name tags keep the rank.")
+         }).tooltip("Off: no rank in the tab list while in SkyBlock (level + name only). Lobbies and other games show the rank. Chat and name tags always keep the rank.")
       );
       ly += rowH;
       this.addRenderableWidget(
