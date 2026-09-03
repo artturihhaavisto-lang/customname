@@ -1,0 +1,6 @@
+// Root aggregator — version-specific builds live under versions/
+tasks.register('buildAll') {
+	dependsOn ':26.2:build', ':26.1.2:build'
+	group = 'build'
+	description = 'Build Custom Name & Cape for Minecraft 26.2 and 26.1.2'
+}

@@ -1,0 +1,15 @@
+{
+	"required": true,
+	"minVersion": "0.8",
+	"package": "dev.customname.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"client": [
+		"PlayerDisplayNameMixin",
+		"AvatarRendererMixin",
+		"PlayerTabOverlayMixin",
+		"PlayerTeamMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

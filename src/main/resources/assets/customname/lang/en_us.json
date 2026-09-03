@@ -1,0 +1,17 @@
+{
+	"key.customname.open": "Name",
+	"key.customcape.open": "Cape",
+	"key.category.customname.main": "Custom",
+	"screen.customcape.title": "Cape",
+	"screen.customcape.vanilla": "Account Cape (Vanilla)",
+	"screen.customcape.none": "No Cape",
+	"screen.customcape.custom": "Custom Capes",
+	"screen.customcape.official": "Official Capes",
+	"screen.customcape.reload": "Reload",
+	"screen.customcape.done": "Done",
+	"screen.customcape.hint": "Drop 64x32 PNGs into config/customcape/custom/",
+	"command.customcape.set": "Cape set to %s",
+	"command.customcape.cleared": "Using account cape",
+	"command.customcape.unknown": "Unknown cape: %s",
+	"command.customcape.reloaded": "Reloaded custom capes (%s found)"
+}

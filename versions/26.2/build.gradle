@@ -1,0 +1,68 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+	id 'maven-publish'
+}
+
+version = "${mod_version}+${minecraft_version}"
+group = project.maven_group
+
+base {
+	archivesName = project.archives_base_name
+}
+
+def sharedRoot = rootProject.projectDir
+
+loom {
+	mods {
+		"customname" {
+			sourceSet sourceSets.main
+		}
+	}
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+}
+
+sourceSets {
+	main {
+		java {
+			srcDir new File(sharedRoot, 'src/main/java')
+		}
+		resources {
+			srcDir new File(sharedRoot, 'src/main/resources')
+		}
+	}
+}
+
+processResources {
+	inputs.property 'version', project.version
+	inputs.property 'minecraft_version_range', project.minecraft_version_range
+	inputs.property 'loader_version', project.loader_version
+	filteringCharset 'UTF-8'
+
+	filesMatching('fabric.mod.json') {
+		expand version: project.version,
+			minecraft_version_range: project.minecraft_version_range,
+			loader_version: project.loader_version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+	it.options.encoding = 'UTF-8'
+}
+
+java {
+	withSourcesJar()
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+}
+
+jar {
+	from(new File(sharedRoot, 'LICENSE')) {
+		rename { "${it}_${project.archives_base_name}" }
+	}
+}
