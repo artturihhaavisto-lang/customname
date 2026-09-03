@@ -60,7 +60,15 @@ public final class HypixelSpoof {
    }
 
    public static Component rewriteOverlay(Component var0) {
-      return var0 != null && NameConfig.get().spoofPurse ? rewriteCoins(var0, NameConfig.get()) : var0;
+      if (var0 != null && NameConfig.get().spoofPurse) {
+         NameConfig var1 = NameConfig.get();
+         // The SkyBlock action bar shows the purse as "Purse: N" / "Piggy: N";
+         // "N coins" only appears in bazaar/auction style lines. Try both.
+         Component var2 = rewritePurse(var0, var1);
+         return rewriteCoins(var2, var1);
+      } else {
+         return var0;
+      }
    }
 
    public static Component rewriteTab(Component var0) {

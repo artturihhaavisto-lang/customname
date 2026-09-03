@@ -10,6 +10,7 @@ import dev.customname.util.ColorCodes;
 import dev.customname.util.DisplayNameBuilder;
 import dev.customname.util.SkyblockLevels;
 import dev.customname.util.TabDisplayRewriter;
+import dev.customname.compat.GuiCompat;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -73,7 +74,7 @@ public class AppearanceScreen extends Screen {
 
    public static void open(AppearanceScreen.Tab tab) {
       Minecraft mc = Minecraft.getInstance();
-      mc.schedule(() -> mc.setScreenAndShow(new AppearanceScreen(mc.gui.screen(), tab)));
+      mc.schedule(() -> mc.setScreenAndShow(new AppearanceScreen(GuiCompat.screen(mc), tab)));
    }
 
    protected void init() {
@@ -216,10 +217,17 @@ public class AppearanceScreen extends Screen {
       );
       ly += rowH;
       this.addRenderableWidget(
-         new ToggleRow(x, ly, leftW, "Replace rank tag with prefix", this.draft.replaceLevelWithPrefix, v -> {
-            this.draft.replaceLevelWithPrefix = v;
+         new ToggleRow(x, ly, leftW, "Name color matches rank", this.draft.nameMatchesRankColor, v -> {
+            this.draft.nameMatchesRankColor = v;
             this.refreshPreview();
-         }).tooltip("Replace your Hypixel rank tag with your prefix. Level and emblem stay.")
+         }).tooltip("Color the custom name after the rank prefix: the rank letter color, or the same gradient when the prefix uses chroma.")
+      );
+      ly += rowH;
+      this.addRenderableWidget(
+         new ToggleRow(x, ly, leftW, "Show rank in tab list", this.draft.showRankInTab, v -> {
+            this.draft.showRankInTab = v;
+            this.refreshPreview();
+         }).tooltip("Off: no rank in the tab list while in SkyBlock (level + name only). Lobbies and other games show the rank. Chat and name tags always keep the rank.")
       );
       ly += rowH;
       this.addRenderableWidget(
@@ -430,7 +438,7 @@ public class AppearanceScreen extends Screen {
    private void applyImportedCape(CapeTextureManager.ImportResult result) {
       if (result != null) {
          this.toastCape(result);
-         if (this.minecraft != null && this.minecraft.gui.screen() == this) {
+         if (this.minecraft != null && GuiCompat.screen(this.minecraft) == this) {
             this.rebuildWidgets();
          }
       }
@@ -439,7 +447,7 @@ public class AppearanceScreen extends Screen {
    private void toastCape(CapeTextureManager.ImportResult result) {
       if (this.minecraft != null) {
          SystemToast.addOrUpdate(
-            this.minecraft.gui.toastManager(),
+            GuiCompat.toasts(this.minecraft),
             result.success() ? CAPE_TOAST : SystemToastId.FILE_DROP_FAILURE,
             Component.literal(result.success() ? "Cape uploaded" : "Cape upload failed"),
             Component.literal(result.message())
@@ -627,7 +635,8 @@ public class AppearanceScreen extends Screen {
          MutableComponent vanillaSender = Component.empty();
          vanillaSender.append(SkyblockLevels.buildLevelTag(224));
          vanillaSender.append(Component.literal(" "));
-         vanillaSender.append(Component.literal("\u2666 ").withStyle(Style.EMPTY.withColor(TextColor.fromRgb(15254378))));
+         // No emblem here: the diamond is an optional SkyBlock cosmetic, not part
+         // of the default chat sender line.
          vanillaSender.append(Component.literal("[MVP+]").withStyle(Style.EMPTY.withColor(TextColor.fromRgb(43690))));
          vanillaSender.append(Component.literal(" "));
          vanillaSender.append(Component.literal(real));
@@ -640,8 +649,7 @@ public class AppearanceScreen extends Screen {
 
          skyblock.append(SkyblockLevels.buildLevelTag(level));
          skyblock.append(Component.literal(" "));
-         skyblock.append(Component.literal("\u2666 ").withStyle(Style.EMPTY.withColor(TextColor.fromRgb(15254378))));
-         if (this.draft.replaceLevelWithPrefix && this.draft.prefix != null && !this.draft.prefix.isBlank()) {
+         if (this.draft.prefix != null && !this.draft.prefix.isBlank()) {
             skyblock.append(DisplayNameBuilder.buildPrefix(this.draft));
          } else {
             skyblock.append(Component.literal("[MVP+]").withStyle(Style.EMPTY.withColor(TextColor.fromRgb(43690))));

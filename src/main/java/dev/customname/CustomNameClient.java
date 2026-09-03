@@ -51,6 +51,10 @@ public class CustomNameClient implements ClientModInitializer {
             AppearanceScreen.open(AppearanceScreen.Tab.CAPE);
          }
       });
-      LOGGER.info("Custom loaded \u2014 N for name, K for cape");
+      String version = net.fabricmc.loader.api.FabricLoader.getInstance()
+         .getModContainer(MOD_ID)
+         .map(container -> container.getMetadata().getVersion().getFriendlyString())
+         .orElse("?");
+      LOGGER.info("CustomName {} loaded \u2014 N for name, K for cape", version);
    }
 }

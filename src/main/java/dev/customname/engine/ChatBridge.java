@@ -9,11 +9,14 @@ import net.minecraft.network.chat.Component;
  * Rewrites incoming chat through the Fabric message API instead of a mixin.
  *
  * <p>Hypixel delivers chat as system messages, not signed player chat, so
- * {@code MODIFY_GAME} is the hook that actually sees those lines. This also
- * covers the action bar (overlay = true), which is where purse text appears.
+ * {@code MODIFY_GAME} is the hook that actually sees those lines (this API
+ * generation offers no modify event for player chat). This also covers the
+ * action bar (overlay = true), which is where purse text appears.
  *
- * <p>Chroma in chat is a snapshot: a chat line is built once on arrival and its
- * colours are baked into the message history, so it does not animate.
+ * <p>Chat lines run through {@link LineRewriter#rewriteChat}: the local
+ * player's sender header is normalised (equipped emblems stripped), then custom
+ * name, SkyBlock level tag and donor rank are spoofed, restricted to the header
+ * where that matters.
  */
 public final class ChatBridge {
 	private ChatBridge() {
@@ -43,8 +46,9 @@ public final class ChatBridge {
 			return message;
 		}
 
-		// Simple: replace every mention of the username with the custom display name
-		Component rewritten = LineRewriter.replaceChatName(message, username, config);
+		// The same rewrite the tab list uses, chat-tuned: header normalised
+		// (no emblem), name mentions, level tag and rank spoofed in the header.
+		Component rewritten = LineRewriter.rewriteChat(message, username, config);
 		return rewritten == null ? message : rewritten;
 	}
 }

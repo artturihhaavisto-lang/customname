@@ -21,9 +21,9 @@ import net.minecraft.world.scores.Objective;
  * given, so offsets are always consistent with the text being edited.
  */
 public final class LineRewriter {
-	public static final Pattern SKYBLOCK_LEVEL = Pattern.compile("\\[\\d{1,4}]");
+	public static final Pattern SKYBLOCK_LEVEL = Pattern.compile("\\[\\d{1,5}]");
 	private static final Pattern DONOR_RANK = Pattern.compile(
-		"\\[(?:VIP\\+|VIP|MVP\\+\\+|MVP\\+|MVP|YOUTUBE|ADMIN|GM|MOD|HELPER|OWNER|PIG\\+\\+\\+|PIG\\+\\+|PIG\\+|PIG)\\]",
+		"\\[\\s*(?:VIP\\+|VIP|MVP\\+\\+|MVP\\+|MVP|YOUTUBE|ADMIN|GM|MOD|HELPER|OWNER|PIG\\+\\+\\+|PIG\\+\\+|PIG\\+|PIG)\\s*\\]",
 		Pattern.CASE_INSENSITIVE
 	);
 
@@ -44,23 +44,32 @@ public final class LineRewriter {
 	 * @param animated when true chroma colours are sampled from the current clock.
 	 */
 	public static Component rewrite(Component original, String username, NameConfig config, boolean applyCustomName, boolean animated) {
+		return rewrite(original, username, config, applyCustomName, animated, false);
+	}
+
+	/**
+	 * @param hideRank when true no prefix is added and any real rank tag is
+	 *     removed from the local player's header — used for the tab list, where
+	 *     the rank can be turned off independently of chat and name tags.
+	 */
+	public static Component rewrite(Component original, String username, NameConfig config, boolean applyCustomName, boolean animated, boolean hideRank) {
 		if (username == null || username.isBlank()) {
 			return original;
 		}
 
 		boolean custom = applyCustomName && config.hasCustomDisplay();
-		boolean rank = config.hasRankSpoof();
+		boolean rank = !hideRank && config.hasRankSpoof();
 		boolean level = config.hasLevelSpoof();
-		if (!custom && !rank && !level) {
+		if (!custom && !rank && !level && !hideRank) {
 			return original;
 		}
 
 		if (original == null) {
-			return custom ? NameStyler.full(username, config, animated) : null;
+			return custom ? (hideRank ? NameStyler.name(username, config, animated) : NameStyler.full(username, config, animated)) : null;
 		}
 
 		if (custom && !rank && !level && isBareName(original, username, config)) {
-			return NameStyler.full(username, config, animated);
+			return hideRank ? NameStyler.name(username, config, animated) : NameStyler.full(username, config, animated);
 		}
 
 		Component result = original;
@@ -68,15 +77,47 @@ public final class LineRewriter {
 			result = Segments.replaceAll(result, Identity.wordPattern(username), () -> NameStyler.name(username, config, animated));
 		}
 
-		if (level) {
+		// Level tags are a SkyBlock concept; never spoof them elsewhere.
+		if (level && inSkyblock()) {
 			result = replaceLevel(result, config);
 		}
 
 		if (rank) {
 			result = replaceRank(result, username, config, animated);
+		} else if (hideRank) {
+			result = stripRankTag(result, username, config);
 		}
 
 		return result;
+	}
+
+	/**
+	 * Removes the real donor rank tag (and one following space) from the local
+	 * player's header without touching anything else — the tab-list form of rank
+	 * handling when {@code showRankInTab} is off.
+	 */
+	static Component stripRankTag(Component original, String username, NameConfig config) {
+		if (original == null) {
+			return original;
+		}
+
+		String plain = original.getString();
+		int[] name = findName(plain, username, config);
+		if (name == null) {
+			return original;
+		}
+
+		int[] rank = findRankBefore(plain, name[0]);
+		if (rank == null) {
+			return original;
+		}
+
+		int end = rank[1];
+		if (end < plain.length() && Character.isWhitespace(plain.charAt(end))) {
+			end++;
+		}
+
+		return Segments.replaceRange(original, rank[0], end, Component.empty());
 	}
 
 	public static Component replaceLevel(Component original, NameConfig config) {
@@ -122,6 +163,14 @@ public final class LineRewriter {
 			return original;
 		}
 
+		if (rank == null) {
+			// Sender line without a recognisable rank tag. Log the exact characters
+			// so unexpected server formatting can be diagnosed from latest.log.
+			dev.customname.CustomNameClient.LOGGER.info(
+				"[CustomName/debug] no rank tag in sender line: {}", escapeForLog(plain)
+			);
+		}
+
 		int start = rank == null ? name[0] : rank[0];
 		int end = rank == null ? name[0] : rank[1];
 
@@ -137,10 +186,74 @@ public final class LineRewriter {
 	}
 
 	/**
+	 * Plain text with matching noise removed — invisible characters (zero-width
+	 * spaces, word joiners, BOMs), legacy formatting code sequences
+	 * ({@code §b}, {@code §l}, … which Hypixel embeds directly in the text of
+	 * some lines) and NBSPs converted to plain spaces — plus an index map back to
+	 * the original string so matches can be applied to the original component.
+	 */
+	private record Norm(String text, int[] toOriginal, int[] toNormalized) {
+		static Norm of(String plain) {
+			StringBuilder sb = new StringBuilder(plain.length());
+			int[] toOriginal = new int[plain.length() + 1];
+			int[] toNormalized = new int[plain.length()];
+			for (int i = 0; i < plain.length(); i++) {
+				char c = plain.charAt(i);
+				if (isInvisible(c)) {
+					toNormalized[i] = -1;
+					continue;
+				}
+
+				if (c == '§' && i + 1 < plain.length() && isFormatCode(plain.charAt(i + 1))) {
+					toNormalized[i] = -1;
+					toNormalized[i + 1] = -1;
+					i++;
+					continue;
+				}
+
+				toNormalized[i] = sb.length();
+				toOriginal[sb.length()] = i;
+				sb.append(c == '\u00A0' || c == '\u202F' ? ' ' : c);
+			}
+
+			toOriginal[sb.length()] = plain.length();
+			return new Norm(sb.toString(), toOriginal, toNormalized);
+		}
+
+		static boolean isInvisible(char c) {
+			return Character.getType(c) == Character.FORMAT || c == '\u200B' || c == '\u2060' || c == '\uFEFF';
+		}
+
+		static boolean isFormatCode(char c) {
+			return "0123456789abcdefklmnorABCDEFKLMNOR".indexOf(c) >= 0;
+		}
+
+		/** Original offset of a normalized index; the end sentinel maps to plain.length(). */
+		int original(int normalizedIndex) {
+			return toOriginal[normalizedIndex];
+		}
+
+		/** Normalized index for an original offset that points at a kept character. */
+		int normalized(int originalIndex) {
+			return toNormalized[originalIndex];
+		}
+	}
+
+	/**
 	 * Locates the local player's name. A chat-sender match ("Name:") wins, then the
 	 * first match in the header before ':', then the last match anywhere.
 	 */
 	static int[] findName(String plain, String username, NameConfig config) {
+		if (plain == null || plain.isBlank()) {
+			return null;
+		}
+
+		Norm norm = Norm.of(plain);
+		int[] range = findNameNormalized(norm.text(), username, config);
+		return range == null ? null : new int[]{norm.original(range[0]), norm.original(range[1])};
+	}
+
+	private static int[] findNameNormalized(String plain, String username, NameConfig config) {
 		if (plain == null || plain.isBlank()) {
 			return null;
 		}
@@ -171,32 +284,25 @@ public final class LineRewriter {
 
 	/**
 	 * The last donor rank tag that belongs to the local player: it must end before the
-	 * name and be separated from it only by whitespace. Without the adjacency check a
-	 * line like "[MVP++] Dinnerbone: hi Notch" would steal the other player's rank.
+	 * name and be separated from it only by whitespace or decorative glyphs (a
+	 * SkyBlock emblem can sit between the rank and the name). Without the adjacency
+	 * check a line like "[MVP++] Dinnerbone: hi Notch" would steal the other player's rank.
 	 */
 	private static int[] findRankBefore(String plain, int nameStart) {
-		Matcher matcher = DONOR_RANK.matcher(plain);
+		Norm norm = Norm.of(plain);
+		int normalizedNameStart = norm.normalized(nameStart);
+		Matcher matcher = DONOR_RANK.matcher(norm.text());
 		int start = -1;
 		int end = -1;
 
 		while (matcher.find()) {
-			if (matcher.end() <= nameStart && onlyWhitespaceBetween(plain, matcher.end(), nameStart)) {
+			if (matcher.end() <= normalizedNameStart && noLettersOrDigitsBetween(norm.text(), matcher.end(), normalizedNameStart)) {
 				start = matcher.start();
 				end = matcher.end();
 			}
 		}
 
-		return start < 0 ? null : new int[]{start, end};
-	}
-
-	private static boolean onlyWhitespaceBetween(String text, int from, int to) {
-		for (int i = from; i < to; i++) {
-			if (!Character.isWhitespace(text.charAt(i))) {
-				return false;
-			}
-		}
-
-		return true;
+		return start < 0 ? null : new int[]{norm.original(start), norm.original(end)};
 	}
 
 	/**
@@ -221,14 +327,14 @@ public final class LineRewriter {
 		return text != null && !text.isBlank() && Identity.wordPattern(username).matcher(text).find();
 	}
 
-	/** Normalises the user's level input to a plain 1-4 digit number, or null. */
+	/** Normalises the user's level input to a plain 1-5 digit number, or null. */
 	public static String formatLevel(String raw) {
 		if (raw == null) {
 			return null;
 		}
 
 		String digits = raw.trim().replaceAll("[^0-9]", "");
-		if (digits.isEmpty() || digits.length() > 4) {
+		if (digits.isEmpty() || digits.length() > 5) {
 			return null;
 		}
 
@@ -264,6 +370,200 @@ public final class LineRewriter {
 
 		String stripped = ColorCodes.strip(sidebar.getDisplayName().getString()).toUpperCase(Locale.ROOT);
 		return stripped.contains("SKYBLOCK") || stripped.replaceAll("[^A-Z]", "").contains("SKYBLOCK");
+	}
+
+	/**
+	 * Chat-facing rewrite: the same three steps as {@link #rewrite}, tuned for chat
+	 * lines. The local player's sender header is normalised first — decorative
+	 * emblem glyphs are collapsed — then name mentions are swapped without dragging
+	 * the prefix into someone else's sentence, the SkyBlock level tag is spoofed in
+	 * (swapped, or inserted when the server line has none), and the donor rank is
+	 * swapped or inserted in the header only, exactly like the tab list.
+	 */
+	public static Component rewriteChat(Component original, String username, NameConfig config) {
+		if (original == null || username == null || username.isBlank()) {
+			return original;
+		}
+
+		boolean custom = config.hasCustomDisplay();
+		boolean rank = config.hasRankSpoof();
+		boolean level = config.hasLevelSpoof();
+		if (!custom && !rank && !level) {
+			return original;
+		}
+
+		Component result = stripHeaderEmblems(original, username, config);
+		if (custom) {
+			result = Segments.replaceAll(result, Identity.wordPattern(username), () -> NameStyler.name(username, config, false));
+		}
+
+		// The [N] level tag only exists on SkyBlock; spoofing it anywhere else
+		// (Hypixel lobbies, other games) would fabricate a tag that is not there.
+		if (level && inSkyblock()) {
+			result = replaceChatLevel(result, config, username);
+		}
+
+		if (rank) {
+			result = replaceRank(result, username, config, false);
+		}
+
+		return result;
+	}
+
+	/**
+	 * Removes equipped emblem glyphs from the local player's own sender header by
+	 * collapsing the gaps between header elements (level tag, rank tag, name) to a
+	 * single space. Anything that is not whitespace in those gaps is decorative.
+	 * Other players' lines and non-sender mentions are left untouched.
+	 */
+	private static Component stripHeaderEmblems(Component original, String username, NameConfig config) {
+		if (original == null) {
+			return original;
+		}
+
+		String plain = original.getString();
+		int[] name = findName(plain, username, config);
+		if (name == null || !isSenderPosition(plain, name[0])) {
+			return original;
+		}
+
+		Component result = original;
+		int[] rank = findRankBefore(plain, name[0]);
+
+		// Gap between the rank tag and the name: "… [MVP+] ♦ Steve" -> "… [MVP+] Steve".
+		if (rank != null && !onlyWhitespaceBetween(plain, rank[1], name[0])) {
+			result = Segments.replaceRange(result, rank[1], name[0], Component.literal(" "));
+		}
+
+		// Gap between the level tag and the rank (or the name when no rank):
+		// "[42] ♦ [MVP+] Steve" -> "[42] [MVP+] Steve".
+		plain = result.getString();
+		name = findName(plain, username, config);
+		if (name == null) {
+			return result;
+		}
+
+		rank = findRankBefore(plain, name[0]);
+		int headerEnd = rank != null ? rank[0] : name[0];
+		Matcher levelMatcher = SKYBLOCK_LEVEL.matcher(plain);
+		int levelEnd = -1;
+		while (levelMatcher.find()) {
+			if (levelMatcher.end() <= headerEnd && noLettersOrDigitsBetween(plain, levelMatcher.end(), headerEnd)) {
+				levelEnd = levelMatcher.end();
+			}
+		}
+
+		if (levelEnd >= 0 && !onlyWhitespaceBetween(plain, levelEnd, headerEnd)) {
+			result = Segments.replaceRange(result, levelEnd, headerEnd, Component.literal(" "));
+		}
+
+		return result;
+	}
+
+	private static boolean onlyWhitespaceBetween(String text, int from, int to) {
+		for (int i = from; i < to; i++) {
+			if (!Character.isWhitespace(text.charAt(i))) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Level spoof for chat: only the {@code [N]} tag that belongs to the sender
+	 * header — sitting directly before the rank or the name — is swapped, so
+	 * numbers in brackets inside the message body are left alone.
+	 */
+	private static Component replaceChatLevel(Component original, NameConfig config, String username) {
+		if (original == null) {
+			return original;
+		}
+
+		String text = formatLevel(config.spoofSkyblockLevelValue);
+		if (text == null) {
+			return original;
+		}
+
+		String plain = original.getString();
+		int[] name = findName(plain, username, config);
+		if (name == null) {
+			return original;
+		}
+
+		// The header ends where the rank tag begins when one is present, so a
+		// spoofed level never replaces a bracketed number further back in the line.
+		int headerEnd = name[0];
+		int[] rank = findRankBefore(plain, name[0]);
+		if (rank != null) {
+			headerEnd = rank[0];
+		}
+
+		Norm norm = Norm.of(plain);
+		int normalizedHeaderEnd = norm.normalized(headerEnd);
+		Matcher matcher = SKYBLOCK_LEVEL.matcher(norm.text());
+		int start = -1;
+		int end = -1;
+		while (matcher.find()) {
+			if (matcher.end() <= normalizedHeaderEnd && noLettersOrDigitsBetween(norm.text(), matcher.end(), normalizedHeaderEnd)) {
+				start = matcher.start();
+				end = matcher.end();
+			}
+		}
+
+		if (start < 0) {
+			// No level tag in the header. When the local player is the sender, insert
+			// one before the rank (or the name) so the spoof still shows in chat;
+			// lines that merely mention the local player gain nothing.
+			if (!isSenderPosition(plain, name[0])) {
+				return original;
+			}
+
+			MutableComponent tag = Component.empty().append(SkyblockLevels.buildLevelTag(Integer.parseInt(text)));
+			boolean spaceFollows = headerEnd < plain.length() && Character.isWhitespace(plain.charAt(headerEnd));
+			if (!spaceFollows) {
+				tag.append(Component.literal(" "));
+			}
+
+			return Segments.replaceRange(original, headerEnd, headerEnd, tag);
+		}
+
+		return Segments.replaceRange(original, norm.original(start), norm.original(end), SkyblockLevels.buildLevelTag(Integer.parseInt(text)));
+	}
+
+	/**
+	 * Decorative glyphs (SkyBlock emblems — runes like {@code ᛝ}, ♦, ✧, …) may
+	 * separate the level tag from the header, but real words may not. Hypixel
+	 * names, ranks and level tags are plain ASCII, so only ASCII alphanumerics
+	 * count as content; Unicode symbol characters are emblems.
+	 */
+	private static boolean noLettersOrDigitsBetween(String text, int from, int to) {
+		for (int i = from; i < to; i++) {
+			if (isAsciiLetterOrDigit(text.charAt(i))) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	private static boolean isAsciiLetterOrDigit(int cp) {
+		return cp >= 'a' && cp <= 'z' || cp >= 'A' && cp <= 'Z' || cp >= '0' && cp <= '9';
+	}
+
+	/** Renders a string with every non-ASCII character escaped, for debug logging. */
+	private static String escapeForLog(String s) {
+		StringBuilder sb = new StringBuilder(s.length() + 16);
+		for (int i = 0; i < s.length(); i++) {
+			char c = s.charAt(i);
+			if (c >= 32 && c <= 126) {
+				sb.append(c);
+			} else {
+				sb.append(String.format("\\u%04X", (int)c));
+			}
+		}
+
+		return sb.toString();
 	}
 
 	/**

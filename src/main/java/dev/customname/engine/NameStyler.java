@@ -2,10 +2,13 @@ package dev.customname.engine;
 
 import dev.customname.config.NameConfig;
 import dev.customname.util.ColorCodes;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.TextColor;
 
 /** Builds the styled prefix and name components from the user's config. */
 public final class NameStyler {
@@ -42,9 +45,18 @@ public final class NameStyler {
 			return Component.empty();
 		}
 
-		MutableComponent coloured = config.nameChroma
-			? Chroma.gradient(body, config.nameChromaStart, config.nameChromaEnd, animated)
-			: ColorCodes.coloredLiteral(body, config.nameColor);
+		MutableComponent coloured;
+		if (config.nameMatchesRankColor && config.prefix != null && !config.prefix.isBlank()) {
+			// Name color follows the rank: same gradient for a chroma prefix,
+			// otherwise the prefix's dominant color.
+			coloured = config.prefixChroma
+				? Chroma.gradient(ColorCodes.strip(body), config.prefixChromaStart, config.prefixChromaEnd, animated)
+				: nameInRankColor(body, config);
+		} else if (config.nameChroma) {
+			coloured = Chroma.gradient(body, config.nameChromaStart, config.nameChromaEnd, animated);
+		} else {
+			coloured = ColorCodes.coloredLiteral(body, config.nameColor);
+		}
 
 		return applyFormats(
 			coloured,
@@ -121,5 +133,47 @@ public final class NameStyler {
 			return Optional.empty();
 		}, Style.EMPTY);
 		return out;
+	}
+
+	/** Single-color name using the prefix's dominant color; falls back to the configured name color. */
+	private static MutableComponent nameInRankColor(String body, NameConfig config) {
+		TextColor rank = dominantPrefixColor(config);
+		if (rank == null) {
+			return ColorCodes.coloredLiteral(body, config.nameColor);
+		}
+
+		return Component.literal(ColorCodes.strip(body)).withStyle(Style.EMPTY.withColor(rank));
+	}
+
+	/**
+	 * The rank's letter color: the most frequent color among the prefix's
+	 * alphanumeric glyphs (earliest wins ties). Brackets, punctuation like
+	 * {@code ++}, and spaces are ignored — so {@code &b[&6MVP&c++&b]} yields the
+	 * gold of the {@code MVP} letters, not the aqua brackets.
+	 */
+	private static TextColor dominantPrefixColor(NameConfig config) {
+		TextColor best = null;
+		int bestCount = 0;
+		Map<TextColor, int[]> counts = new LinkedHashMap<>();
+		for (Segments.Glyph glyph : Segments.flatten(prefix(config, false))) {
+			String text = glyph.text();
+			if (text == null || text.isEmpty() || !Character.isLetterOrDigit(text.charAt(0))) {
+				continue;
+			}
+
+			TextColor color = glyph.style().getColor();
+			if (color == null) {
+				continue;
+			}
+
+			int[] tally = counts.computeIfAbsent(color, key -> new int[]{0, counts.size()});
+			tally[0]++;
+			if (tally[0] > bestCount || tally[0] == bestCount && counts.get(best) != null && tally[1] < counts.get(best)[1]) {
+				best = color;
+				bestCount = tally[0];
+			}
+		}
+
+		return best;
 	}
 }

@@ -30,6 +30,8 @@ public final class NameConfig {
    public String presetId = "";
    public boolean enabled = true;
    public boolean nameChroma = false;
+   public boolean nameMatchesRankColor = false;
+   public boolean showRankInTab = false;
    public String nameChromaStart = "#FF5555";
    public String nameChromaEnd = "#55FFFF";
    public boolean prefixChroma = false;
@@ -227,8 +229,8 @@ public boolean replaceLevelWithPrefix = false;
          );
    }
 
-public boolean hasRankSpoof() {
-       return this.prefixEnabled && this.replaceLevelWithPrefix && this.prefix != null && !this.prefix.isBlank();
+   public boolean hasRankSpoof() {
+       return this.prefix != null && !this.prefix.isBlank();
     }
 
    public boolean hasLevelSpoof() {
@@ -247,6 +249,8 @@ public boolean hasRankSpoof() {
    public void clear() {
       this.name = this.nameColor = this.prefix = this.presetId = "";
       this.nameChroma = this.prefixChroma = false;
+      this.nameMatchesRankColor = false;
+      this.showRankInTab = false;
       this.nameBold = this.nameItalic = this.nameUnderline = this.nameStrikethrough = this.nameObfuscated = false;
       this.prefixBold = this.prefixItalic = this.prefixUnderline = this.prefixStrikethrough = this.prefixObfuscated = false;
 this.replaceLevelWithPrefix = false;
@@ -279,6 +283,8 @@ this.replaceLevelWithPrefix = false;
       this.presetId = other.presetId != null ? other.presetId : "";
       this.enabled = other.enabled;
       this.nameChroma = other.nameChroma;
+      this.nameMatchesRankColor = other.nameMatchesRankColor;
+      this.showRankInTab = other.showRankInTab;
       this.nameChromaStart = other.nameChromaStart != null ? other.nameChromaStart : "#FF5555";
       this.nameChromaEnd = other.nameChromaEnd != null ? other.nameChromaEnd : "#55FFFF";
       this.prefixChroma = other.prefixChroma;

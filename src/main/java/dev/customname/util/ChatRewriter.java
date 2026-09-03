@@ -1,6 +1,7 @@
 package dev.customname.util;
 
 import dev.customname.config.NameConfig;
+import dev.customname.engine.LineRewriter;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 
@@ -14,7 +15,7 @@ public final class ChatRewriter {
 	 * using the same rewrite the real chat path uses.
 	 */
 	public static Component previewChatLine(Component vanillaSender, NameConfig draft, String username) {
-		Component sender = TabDisplayRewriter.rewriteForPreview(vanillaSender, draft, username);
+		Component sender = LineRewriter.rewriteChat(vanillaSender, username, draft);
 		MutableComponent out = Component.empty();
 		out.append(sender == null ? vanillaSender : sender);
 		out.append(Component.literal(": Hello!"));

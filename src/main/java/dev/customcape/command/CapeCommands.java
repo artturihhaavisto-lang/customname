@@ -12,6 +12,7 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
+import dev.customname.compat.GuiCompat;
 
 public final class CapeCommands {
    private static final SuggestionProvider<FabricClientCommandSource> CAPE_SUGGESTIONS = (ctx, builder) -> {
@@ -76,7 +77,7 @@ public final class CapeCommands {
                      ))
                   .executes(ctx -> {
                      Minecraft client = Minecraft.getInstance();
-                     client.schedule(() -> client.gui.setScreen(new CapeSelectScreen(client.gui.screen())));
+                     client.schedule(() -> GuiCompat.setScreen(client, new CapeSelectScreen(GuiCompat.screen(client))));
                      return 1;
                   })
             )
