@@ -228,7 +228,7 @@ public boolean replaceLevelWithPrefix = false;
    }
 
    public boolean hasRankSpoof() {
-       return this.prefixEnabled && this.prefix != null && !this.prefix.isBlank();
+       return this.prefix != null && !this.prefix.isBlank();
     }
 
    public boolean hasLevelSpoof() {

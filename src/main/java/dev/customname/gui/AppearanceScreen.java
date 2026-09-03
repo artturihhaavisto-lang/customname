@@ -635,7 +635,7 @@ public class AppearanceScreen extends Screen {
 
          skyblock.append(SkyblockLevels.buildLevelTag(level));
          skyblock.append(Component.literal(" "));
-         if (this.draft.prefixEnabled && this.draft.prefix != null && !this.draft.prefix.isBlank()) {
+         if (this.draft.prefix != null && !this.draft.prefix.isBlank()) {
             skyblock.append(DisplayNameBuilder.buildPrefix(this.draft));
          } else {
             skyblock.append(Component.literal("[MVP+]").withStyle(Style.EMPTY.withColor(TextColor.fromRgb(43690))));
