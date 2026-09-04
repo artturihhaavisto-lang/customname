@@ -15,11 +15,13 @@ public final class DisplayNameBuilder {
 	}
 
 	public static boolean appliesTo(UUID uuid) {
-		return Identity.isLocal(uuid) && NameConfig.get().hasCustomDisplay();
+		NameConfig config = NameConfig.get();
+		return Identity.isLocal(uuid) && config.enabled && (config.hasCustomDisplay() || config.hasEmblemSpoof());
 	}
 
 	public static boolean appliesToLocalPlayer() {
-		return Minecraft.getInstance().player != null && NameConfig.get().hasCustomDisplay();
+		NameConfig config = NameConfig.get();
+		return Minecraft.getInstance().player != null && config.enabled && (config.hasCustomDisplay() || config.hasEmblemSpoof());
 	}
 
 	public static MutableComponent build(String realUsername) {

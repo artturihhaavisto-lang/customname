@@ -1,0 +1,148 @@
+# -*- coding: utf-8 -*-
+# Hypixel SkyBlock emblem catalog, transcribed from the wiki tables the user supplied.
+# Each entry: (id, category, label, format, requirement)
+# format uses Minecraft color codes (&7, &6, &b, &d ...) followed by the glyph.
+
+S  = "Skills"
+C  = "Catacombs"
+L  = "Leveling"
+SL = "Slayer"
+A  = "Achievement"
+M  = "MVP++"
+SP = "Special"
+
+EMBLEMS = [
+    # ---- Skills ----
+    ("mining_pickaxe",       S, "Mining Pickaxe",        "&7&l\u2E15", "Mining L (50)"),
+    ("mining_master",        S, "Mining Master",         "&6&l\u2E15", "Mining LX (60)"),
+    ("farming_flower",       S, "Farming Flower",        "&7\u273F", "Farming L (50)"),
+    ("farming_master",       S, "Farming Master",        "&6\u273F", "Farming LX (60)"),
+    ("combat_explosion",     S, "Combat Explosion",      "&7\u2741", "Combat L (50)"),
+    ("combat_master",        S, "Combat Master",         "&6\u2741", "Combat LX (60)"),
+    ("foraging_leaf",        S, "Foraging Leaf",         "&7\u2E19", "Foraging L (50)"),
+    ("fishing_fish",         S, "Fishing Fish",          "&7\u03B1", "Fishing L (50)"),
+    ("enchanting_pencil",    S, "Enchanting Pencil",     "&7\u270E", "Enchanting L (50)"),
+    ("enchanting_master",    S, "Enchanting Master",     "&6\u270E", "Enchanting LX (60)"),
+    ("alchemy_brew",         S, "Alchemy Brew",          "&7\u2615", "Alchemy L (50)"),
+    ("carpentry_house",      S, "Carpentry House",       "&7\u2616", "Carpentry L (50)"),
+    ("taming_clover",        S, "Taming Clover",         "&7\u2663", "Taming L (50)"),
+    ("taming_master",        S, "Taming Master",         "&6\u2663", "Taming LX (60)"),
+    ("social_statement",     S, "Social Statement",      "&7&l\u213B", "Social XV (15)"),
+    ("social_master",        S, "Social Master",         "&6&l\u213B", "Social XXV (25)"),
+
+    # ---- Catacombs ----
+    ("catacombs_swords",          C, "Catacombs Swords",           "&7&l\u2694", "Catacombs XL (40)"),
+    ("catacombs_swords_gold",     C, "Golden Catacombs Swords",    "&6&l\u2694", "Catacombs L (50)"),
+    ("archer_spade",              C, "Archer Spade",               "&7\u27B6", "Archer XL"),
+    ("archer_master",             C, "Archer Master",              "&6\u27B6", "Archer L"),
+    ("mage_lightning",            C, "Mage Lightning",             "&7&l\u26A1", "Mage XL"),
+    ("mage_master",               C, "Mage Master",                "&6&l\u26A1", "Mage L"),
+    ("berserk_explosion",         C, "Berserk Explosion",          "&7\u2604", "Berserk XL"),
+    ("berserk_master",            C, "Berserk Master",             "&6\u2604", "Berserk L"),
+    ("healer_staff",              C, "Healer Staff",               "&7\u269A", "Healer XL"),
+    ("healer_master",             C, "Healer Master",              "&6\u269A", "Healer L"),
+    ("tank_anchor",               C, "Tank Anchor",                "&7\u2693", "Tank XL"),
+    ("tank_master",               C, "Tank Master",                "&6\u2693", "Tank L"),
+    ("dungeon_runner",            C, "Dungeon Runner",             "&7\u2620", "The Catacombs - Floor VII Completion"),
+    ("dungeon_master",            C, "Dungeon Master",             "&6\u2620", "Master Mode Catacombs - Floor VII Completion"),
+    ("class_master",              C, "Class Master",               "&7&l\u269B", "Class Average XXX (30)"),
+    ("class_master_gold",         C, "Golden Class Master",        "&6&l\u269B", "Class Average XL (40)"),
+    ("class_master_diamond",      C, "Diamond Class Master",       "&b&l\u269B", "Class Average L (50)"),
+
+    # ---- Leveling ----
+    ("diamond",           L, "Diamond",          "&7\u2666", "SkyBlock Level 10"),
+    ("spade",             L, "Spade",            "&7\u2660", "SkyBlock Level 20"),
+    ("heart",             L, "Heart",            "&7\u2764", "SkyBlock Level 30"),
+    ("pristine",          L, "Pristine",         "&7\u2727", "SkyBlock Level 40"),
+    ("arc_reactor",       L, "Arc Reactor",      "&7\u238A", "SkyBlock Level 50"),
+    ("marker",            L, "Marker",           "&7\u1360", "SkyBlock Level 60"),
+    ("badge",             L, "Badge",            "&7\u262C", "SkyBlock Level 70"),
+    ("star",              L, "Star",             "&7&l\u269D", "SkyBlock Level 80"),
+    ("boxes",             L, "Boxes",            "&7\u29C9", "SkyBlock Level 90"),
+    ("jerry",             L, "Jerry",            "&7&l\uA214", "SkyBlock Level 100"),
+    ("globe",             L, "Globe",            "&7&l\u32D6", "SkyBlock Level 120"),
+    ("soulflow",          L, "Soulflow",         "&7\u2E0E", "SkyBlock Level 140"),
+    ("warning",           L, "Warning",          "&7\u26A0", "SkyBlock Level 160"),
+    ("mustache",          L, "Mustache",         "&7&l\uA541", "SkyBlock Level 180"),
+    ("helmet",            L, "Helmet",           "&7\u3020", "SkyBlock Level 200"),
+    ("sideways_smiley",   L, "Sideways Smiley",  "&7&l\u30C4", "SkyBlock Level 250"),
+    ("spaceship",         L, "Spaceship",        "&7\u2948", "SkyBlock Level 300"),
+    ("toxic",             L, "Toxic",            "&7\u2622", "SkyBlock Level 350"),
+    ("biohazard",         L, "Biohazard",        "&7\u2623", "SkyBlock Level 400"),
+    ("florette",          L, "Florette",         "&7\u273E", "SkyBlock Level 450"),
+    ("fleur_de_lis",      L, "Golden Fleur De Lis", "&6\u269C", "SkyBlock Level 500"),
+
+    # ---- Slayer ----
+    ("revenant_brain",       SL, "Revenant Horror Brain",         "&7\u0BD0", "Revenant Horror Tier V (5) Completion"),
+    ("revenant_brain_gold",  SL, "Golden Revenant Horror Brain",  "&6\u0BD0", "Zombie Slayer LVL IX (9)"),
+    ("broodmother_string",   SL, "Broodmother String",            "&7\u0A6D", "Tarantula Broodfather Tier IV (4) Completion"),
+    ("broodmother_gold",     SL, "Golden Broodmother String",     "&6\u0A6D", "Spider Slayer LVL IX (9)"),
+    ("sven_shield",          SL, "Sven Shield",                   "&7\u2742", "Sven Packmaster Tier IV (4) Completion"),
+    ("sven_shield_gold",     SL, "Golden Sven Shield",            "&6\u2742", "Wolf Slayer LVL IX (9)"),
+    ("voidgloom_rune",       SL, "Voidgloom Rune",                "&7\u16C3", "Voidgloom Seraph Tier IV (4) Completion"),
+    ("voidgloom_rune_gold",  SL, "Golden Voidgloom Rune",         "&6\u16C3", "Enderman Slayer LVL IX (9)"),
+    ("inferno_rods",         SL, "Inferno Rods",                  "&7\u3023", "Inferno Demonlord Tier IV (4) Completion"),
+    ("inferno_rods_gold",    SL, "Golden Inferno Rods",           "&6\u3023", "Blaze Slayer LVL IX (9)"),
+    ("riftstalker",          SL, "Riftstalker Strange Time",      "&7\u10F6", "Riftstalker Bloodfiend Tier V (5) Completion"),
+    ("riftstalker_gold",     SL, "Golden Riftstalker Strange Time", "&6\u10F6", "Vampire Slayer LVL V (5)"),
+
+    # ---- Achievement ----
+    ("rift_time",             A, "Rift Time",                    "&7\u0444", "Completed the Rift Guide"),
+    ("harp_note",             A, "Harp Note",                    "&7\u266A", "All Harp Songs Completed"),
+    ("harp_master",           A, "Harp Master",                  "&6\u266B", "All Harp Songs Perfected"),
+    ("kuudra_slayer",         A, "Kuudra Slayer",                "&7&l\u04C3", "2000 Kuudra Boss Collection Progress"),
+    ("kuudra_slayer_master",  A, "Master Kuudra Slayer",         "&6&l\u04C3", "5000 Kuudra Boss Collection Progress"),
+    ("ultra_banker",          A, "Ultra Banker",                 "&6\u26C1", "Luxurious Bank Upgrade"),
+    ("extreme_banker",        A, "Extreme Banker",               "&6\u26C3", "Palatial Bank Upgrade"),
+    ("mining_helix",          A, "Mining Helix",                 "&7&l\u16DD", "Heart of the Mountain 5"),
+    ("mining_helix_gold",     A, "Golden Mining Helix",          "&6&l\u16DD", "Heart of the Mountain 7"),
+    ("mining_helix_diamond",  A, "Diamond Mining Helix",         "&b&l\u16DD", "Heart of the Mountain 10"),
+    ("foraging_clover",       A, "Foraging Clover",              "&7&l\u2618", "Heart of the Forest 5"),
+    ("foraging_clover_gold",  A, "Golden Foraging Clover",       "&6&l\u2618", "Heart of the Forest 7"),
+    ("agatha_jewel",          A, "Agatha's Jewel",               "&7&l\uA598", "Agatha Milestone V (5)"),
+    ("gardener",              A, "Gardener",                     "&7\uA03E", "Garden XII (12)"),
+    ("gardener_gold",         A, "Golden Gardener",              "&6\uA03E", "Garden XV (15)"),
+    ("collecting_top_hat",    A, "Collecting Top Hat",           "&7\u1C6A", "100 Museum Donations"),
+    ("collecting_top_hat_gold", A, "Golden Collecting Top Hat",  "&6\u1C6A", "300 Museum Donations"),
+    ("magical_sigma",         A, "Magical Sigma",                "&7\u03A3", "1000 Accessory Power"),
+    ("magical_sigma_gold",    A, "Golden Magical Sigma",         "&6\u03A3", "2000 Accessory Power"),
+    ("chili_pepper_gold",     A, "Golden Chili Pepper",          "&6\u09EB", "5 Reaper Peppers Eaten"),
+    ("snowman",               A, "Snowman",                      "&7\u2603", "500 Gifts Given"),
+    ("trophy_king",           A, "Trophy King",                  "&7\u2654", "All Silver Trophy Fish"),
+    ("trophy_king_gold",      A, "Golden Trophy King",           "&6\u2654", "All Gold Trophy Fish"),
+    ("trophy_king_diamond",   A, "Diamond Trophy King",          "&b\u2654", "All Diamond Trophy Fish"),
+    ("trophy_frog_king",      A, "Trophy Frog King",             "&7\U0001F438", "All Silver Trophy Frogs"),
+    ("trophy_frog_king_gold", A, "Golden Trophy Frog King",      "&6\U0001F438", "All Gold Trophy Frogs"),
+    ("trophy_frog_king_diamond", A, "Diamond Trophy Frog King",  "&b\U0001F438", "All Diamond Trophy Frogs"),
+    ("century_celebrant",     A, "Century Celebrant",            "&7\u26C2", "Raffle Milestone II"),
+    ("century_partygoer",     A, "Century Partygoer",            "&6\u26C2", "Raffle Milestone IV"),
+    ("great_spook",           A, "Great Spook",                  "&5\u0FC7", "Vargul the Unearthed Milestone VI"),
+    ("gift_of_giving",        A, "Gift of Giving",               "&6\u2709", "Gift Milestone XXV"),
+    ("jacobs_contest",        A, "Jacob's Contest Completionist", "&7\uA56A", "Silver in all crops in Jacob's Farming Contests"),
+    ("jacobs_contest_gold",   A, "Golden Jacob's Contest Completionist", "&6\uA56A", "Gold in all crops in Jacob's Farming Contests"),
+    ("jacobs_contest_diamond", A, "Diamond Jacob's Contest Completionist", "&b\uA56A", "Diamond in all crops in Jacob's Farming Contests"),
+    ("chocolate_bar",         A, "Chocolate Bar",                "&7\u2592", "5M all-time Chocolate"),
+    ("chocolate_bar_gold",    A, "Golden Chocolate Bar",         "&6\u2592", "50B all-time Chocolate"),
+    ("burning_strength",      A, "Emblem of Burning Strength",   "&6\u2600", "Purchase at Oruo The Almighty"),
+
+    # ---- MVP++ ----
+    ("subscriber_1",   M, "1-Month Subscriber's Star",   "&d\u2729", "MVP++ and 1 total subscribed month"),
+    ("subscriber_2",   M, "2-Month Subscriber's Star",   "&d\u272C", "MVP++ and 2 total subscribed months"),
+    ("subscriber_3",   M, "3-Month Subscriber's Star",   "&d\u272E", "MVP++ and 3 total subscribed months"),
+    ("subscriber_6",   M, "6-Month Subscriber's Star",   "&d\u272F", "MVP++ and 6 total subscribed months"),
+    ("subscriber_9",   M, "9-Month Subscriber's Star",   "&d\u2736", "MVP++ and 9 total subscribed months"),
+    ("subscriber_12",  M, "12-Month Subscriber's Star",  "&d\u2733", "MVP++ and 12 total subscribed months"),
+    ("subscriber_18",  M, "18-Month Subscriber's Star",  "&d\u2734", "MVP++ and 18 total subscribed months"),
+    ("subscriber_24",  M, "24-Month Subscriber's Star",  "&d\u2737", "MVP++ and 24 total subscribed months"),
+    ("subscriber_36",  M, "36-Month Subscriber's Star",  "&d\u2738", "MVP++ and 36 total subscribed months"),
+    ("subscriber_48",  M, "48-Month Subscriber's Star",  "&d\u2739", "MVP++ and 48 total subscribed months"),
+    ("subscriber_60",  M, "60-Month Subscriber's Star",  "&d\u273A", "MVP++ and 60 total subscribed months"),
+
+    # ---- Special ----
+    ("hypixel",           SP, "Hypixel",                 "&6\u12DE", "Hypixel Staff Only"),
+    ("raffle_green",      SP, "Century Raffle Green",    "&a\u26C3", "Randomly selected during Raffle of the Century"),
+    ("raffle_yellow",     SP, "Century Raffle Yellow",   "&e\u26C3", "Randomly selected during Raffle of the Century"),
+    ("raffle_red",        SP, "Century Raffle Red",      "&c\u26C3", "Randomly selected during Raffle of the Century"),
+    ("raffle_pink",       SP, "Century Raffle Pink",     "&d\u26C3", "Randomly selected during Raffle of the Century"),
+    ("raffle_blue",       SP, "Century Raffle Blue",     "&9\u26C3", "Randomly selected during Raffle of the Century"),
+]
