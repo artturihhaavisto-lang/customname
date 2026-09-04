@@ -55,6 +55,10 @@ public class CustomNameClient implements ClientModInitializer {
          .getModContainer(MOD_ID)
          .map(container -> container.getMetadata().getVersion().getFriendlyString())
          .orElse("?");
-      LOGGER.info("CustomName {} loaded \u2014 N for name, K for cape", version);
+      NameConfig config = NameConfig.get();
+      LOGGER.info(
+         "CustomName {} loaded \u2014 N for name, K for cape | enabled={} hideOwnNameTag={} hideOtherNameTags={} ownTagAsTab={}",
+         version, config.enabled, config.hideOwnNameTag, config.hideOtherNameTags, config.ownTabListNameTag
+      );
    }
 }

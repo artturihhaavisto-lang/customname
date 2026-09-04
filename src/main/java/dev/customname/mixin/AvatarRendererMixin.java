@@ -39,6 +39,12 @@ public class AvatarRendererMixin {
          }
 
          if (NameTagFromTab.isHidden(player)) {
+            if (Minecraft.getInstance().isLocalPlayer(player.getUUID())) {
+               NameTagFromTab.debugNametag("hidden",
+                  "hideOwnNameTag", dev.customname.config.NameConfig.get().hideOwnNameTag,
+                  "hideOthers", dev.customname.config.NameConfig.get().hideOtherNameTags);
+            }
+
             state.nameTag = null;
             state.scoreText = null;
          } else {
@@ -52,6 +58,8 @@ public class AvatarRendererMixin {
                   }
                } else if (mc.isLocalPlayer(player.getUUID())) {
                   state.nameTag = player.getDisplayName();
+                  NameTagFromTab.debugNametag("fallback-displayname",
+                     "tag", dev.customname.engine.LineRewriter.escapeForLog(state.nameTag.getString()));
                }
             }
          }

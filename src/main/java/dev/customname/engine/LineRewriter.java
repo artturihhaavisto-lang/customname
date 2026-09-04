@@ -60,7 +60,10 @@ public final class LineRewriter {
 		boolean custom = applyCustomName && config.hasCustomDisplay();
 		boolean rank = !hideRank && config.hasRankSpoof();
 		boolean level = config.hasLevelSpoof();
-		if (!custom && !rank && !level && !hideRank) {
+		// Emblems are a SkyBlock cosmetic, exactly like the level tag: never show
+		// them in lobbies or other games.
+		boolean emblem = config.hasEmblemSpoof() && inSkyblock();
+		if (!custom && !rank && !level && !emblem && !hideRank) {
 			return original;
 		}
 
@@ -72,7 +75,7 @@ public final class LineRewriter {
 			return hideRank ? NameStyler.name(username, config, animated) : NameStyler.full(username, config, animated);
 		}
 
-		Component result = original;
+		Component result = stripHeaderEmblems(original, username, config);
 		if (custom) {
 			result = Segments.replaceAll(result, Identity.wordPattern(username), () -> NameStyler.name(username, config, animated));
 		}
@@ -86,6 +89,11 @@ public final class LineRewriter {
 			result = replaceRank(result, username, config, animated);
 		} else if (hideRank) {
 			result = stripRankTag(result, username, config);
+		}
+
+		// The emblem trails the name on tab rows and name tags ("[228] [MVP+] name ⸕").
+		if (emblem) {
+			result = insertEmblemAfterName(result, username, config);
 		}
 
 		return result;
@@ -118,6 +126,108 @@ public final class LineRewriter {
 		}
 
 		return Segments.replaceRange(original, rank[0], end, Component.empty());
+	}
+
+	/**
+	 * The chosen emblem trailing the local player's name, the Hypixel tab-list and
+	 * name-tag style ("[228] [MVP+] h_up ⸕"). Only applied to the sender header.
+	 */
+	static Component insertEmblemAfterName(Component component, String username, NameConfig config) {
+		if (component == null || !config.hasEmblemSpoof()) {
+			return component;
+		}
+
+		String plain = component.getString();
+		int[] name = findName(plain, username, config);
+		if (name == null || !isSenderPosition(plain, name[0])) {
+			return component;
+		}
+
+		MutableComponent em = NameStyler.emblem(config, false);
+		if (em.getString().isEmpty()) {
+			return component;
+		}
+
+		int lineEnd = plain.length();
+		int colon = plain.indexOf(':', name[1]);
+		if (colon >= 0) {
+			lineEnd = colon;
+		}
+
+		MutableComponent replacement = Component.empty();
+		replacement.append(Component.literal(" "));
+		replacement.append(em);
+		return Segments.replaceRange(component, lineEnd, lineEnd, replacement);
+	}
+
+	/**
+	 * The chosen emblem between the SkyBlock level tag and the rank, the Hypixel
+	 * chat style ("[42] ⸕ [MVP+] name"). When there is no level tag the emblem is
+	 * inserted before the rank (or before the name), still only in the sender header.
+	 */
+	static Component insertEmblemBeforeRank(Component component, String username, NameConfig config) {
+		if (component == null || !config.hasEmblemSpoof()) {
+			return component;
+		}
+
+		String plain = component.getString();
+		int[] name = findName(plain, username, config);
+		if (name == null || !isSenderPosition(plain, name[0])) {
+			return component;
+		}
+
+		MutableComponent em = NameStyler.emblem(config, false);
+		if (em.getString().isEmpty()) {
+			return component;
+		}
+
+		int point;
+		int levelEnd = findLevelTagEnd(plain, name[0]);
+		if (levelEnd >= 0) {
+			point = levelEnd;
+		} else {
+			int[] rank = findRankBefore(plain, name[0]);
+			point = rank != null ? rank[0] : name[0];
+		}
+
+		return insertAt(component, point, em);
+	}
+
+	/** End index of the SkyBlock level tag in the sender header, or -1. */
+	private static int findLevelTagEnd(String plain, int nameStart) {
+		Matcher matcher = SKYBLOCK_LEVEL.matcher(plain);
+		int end = -1;
+		while (matcher.find()) {
+			if (matcher.end() > nameStart) {
+				break;
+			}
+
+			end = matcher.end();
+		}
+
+		return end;
+	}
+
+	/** Inserts {@code em} at {@code point}, keeping exactly one space per side. */
+	private static Component insertAt(Component component, int point, MutableComponent em) {
+		String plain = component.getString();
+		if (point < 0 || point > plain.length()) {
+			return component;
+		}
+
+		boolean leftSpace = point > 0 && !Character.isWhitespace(plain.charAt(point - 1));
+		boolean rightSpace = point < plain.length() && !Character.isWhitespace(plain.charAt(point));
+		MutableComponent replacement = Component.empty();
+		if (leftSpace) {
+			replacement.append(Component.literal(" "));
+		}
+
+		replacement.append(em);
+		if (rightSpace) {
+			replacement.append(Component.literal(" "));
+		}
+
+		return Segments.replaceRange(component, point, point, replacement);
 	}
 
 	public static Component replaceLevel(Component original, NameConfig config) {
@@ -381,6 +491,32 @@ public final class LineRewriter {
 	 * swapped or inserted in the header only, exactly like the tab list.
 	 */
 	public static Component rewriteChat(Component original, String username, NameConfig config) {
+		return rewriteChat(original, username, config, false, false);
+	}
+
+	/**
+	 * Chat-facing rewrite: the same three steps as {@link #rewrite}, tuned for chat
+	 * lines. The local player's sender header is normalised first — decorative
+	 * emblem glyphs are collapsed — then name mentions are swapped without dragging
+	 * the prefix into someone else's sentence, the SkyBlock level tag is spoofed in
+	 * (swapped, or inserted when the server line has none), and the donor rank is
+	 * swapped or inserted in the header only, exactly like the tab list.
+	 *
+	 * @param emblemTrailing when false the chosen emblem sits between the level
+	 *     tag and the rank (the Hypixel chat style, {@code "[42] ⸕ [MVP+] name"});
+	 *     when true it trails the name (the Hypixel name-tag style,
+	 *     {@code "[42] [MVP+] name ⸕"}), which is what the own name tag uses.
+	 */
+	public static Component rewriteChat(Component original, String username, NameConfig config, boolean emblemTrailing) {
+		return rewriteChat(original, username, config, emblemTrailing, false);
+	}
+
+	/**
+	 * @param forceEmblem when true the emblem is inserted even outside SkyBlock,
+	 *     used by the config-screen preview so the chosen glyph is always visible
+	 *     (production chat, tab and name tags never force it).
+	 */
+	public static Component rewriteChat(Component original, String username, NameConfig config, boolean emblemTrailing, boolean forceEmblem) {
 		if (original == null || username == null || username.isBlank()) {
 			return original;
 		}
@@ -388,7 +524,10 @@ public final class LineRewriter {
 		boolean custom = config.hasCustomDisplay();
 		boolean rank = config.hasRankSpoof();
 		boolean level = config.hasLevelSpoof();
-		if (!custom && !rank && !level) {
+		// Emblems are a SkyBlock cosmetic, exactly like the level tag: never show
+		// them in lobbies or other games (the config preview may force them).
+		boolean emblem = config.hasEmblemSpoof() && (forceEmblem || inSkyblock());
+		if (!custom && !rank && !level && !emblem) {
 			return original;
 		}
 
@@ -405,6 +544,12 @@ public final class LineRewriter {
 
 		if (rank) {
 			result = replaceRank(result, username, config, false);
+		}
+
+		if (emblem) {
+			result = emblemTrailing
+				? insertEmblemAfterName(result, username, config)
+				: insertEmblemBeforeRank(result, username, config);
 		}
 
 		return result;
@@ -455,6 +600,39 @@ public final class LineRewriter {
 
 		if (levelEnd >= 0 && !onlyWhitespaceBetween(plain, levelEnd, headerEnd)) {
 			result = Segments.replaceRange(result, levelEnd, headerEnd, Component.literal(" "));
+		}
+
+		// Trailing emblem: tab rows and name tags put the emblem AFTER the name
+		// ("[228] [MVP+] h_up ᛝ"), unlike chat which puts it before the rank.
+		// Strip everything between the name and the end of the header (a ':' ends
+		// the header in chat) when it is only whitespace and emblem glyphs.
+		plain = result.getString();
+		name = findName(plain, username, config);
+		if (name == null) {
+			return result;
+		}
+
+		int lineEnd = plain.length();
+		int colon = plain.indexOf(':', name[1]);
+		if (colon >= 0) {
+			lineEnd = colon;
+		}
+
+		boolean hasEmblem = false;
+		for (int i = name[1]; i < lineEnd; i++) {
+			char c = plain.charAt(i);
+			if (isAsciiLetterOrDigit(c)) {
+				hasEmblem = false;
+				break;
+			}
+
+			if (!Character.isWhitespace(c)) {
+				hasEmblem = true;
+			}
+		}
+
+		if (hasEmblem) {
+			result = Segments.replaceRange(result, name[1], lineEnd, Component.empty());
 		}
 
 		return result;
@@ -552,7 +730,7 @@ public final class LineRewriter {
 	}
 
 	/** Renders a string with every non-ASCII character escaped, for debug logging. */
-	private static String escapeForLog(String s) {
+	public static String escapeForLog(String s) {
 		StringBuilder sb = new StringBuilder(s.length() + 16);
 		for (int i = 0; i < s.length(); i++) {
 			char c = s.charAt(i);

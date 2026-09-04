@@ -15,7 +15,9 @@ public final class ChatRewriter {
 	 * using the same rewrite the real chat path uses.
 	 */
 	public static Component previewChatLine(Component vanillaSender, NameConfig draft, String username) {
-		Component sender = LineRewriter.rewriteChat(vanillaSender, username, draft);
+		// Preview always shows the chosen emblem so it is visible in the config screen,
+		// even when the screen is opened outside SkyBlock.
+		Component sender = LineRewriter.rewriteChat(vanillaSender, username, draft, false, true);
 		MutableComponent out = Component.empty();
 		out.append(sender == null ? vanillaSender : sender);
 		out.append(Component.literal(": Hello!"));

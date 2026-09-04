@@ -5,6 +5,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import dev.customname.config.EmblemPresets;
 import dev.customname.config.NameConfig;
 import dev.customname.config.RankPresets;
 import dev.customname.gui.AppearanceScreen;
@@ -63,6 +64,12 @@ public final class CustomNameCommands {
                   .executes(CustomNameCommands::openGui);
                dispatcher.register(root);
                dispatcher.register((LiteralArgumentBuilder)ClientCommands.literal("cname").redirect(dispatcher.getRoot().getChild("customname")));
+               dispatcher.register(ClientCommands.literal("emblem")
+                  .then(ClientCommands.argument("emblem", StringArgumentType.word())
+                     .suggests((ctx, builder) -> suggestEmblems(builder))
+                     .executes(CustomNameCommands::setEmblem))
+                  .then(ClientCommands.literal("list").executes(CustomNameCommands::listEmblems)));
+               dispatcher.register(ClientCommands.literal("cemblem").redirect(dispatcher.getRoot().getChild("emblem")));
             }
          );
    }
@@ -70,6 +77,12 @@ public final class CustomNameCommands {
    private static CompletableFuture<Suggestions> suggestRanks(SuggestionsBuilder builder) {
       RankPresets.all().keySet().forEach(builder::suggest);
       RankPresets.all().values().forEach(p -> builder.suggest(p.label()));
+      return builder.buildFuture();
+   }
+
+   private static CompletableFuture<Suggestions> suggestEmblems(SuggestionsBuilder builder) {
+      EmblemPresets.all().keySet().forEach(builder::suggest);
+      EmblemPresets.all().values().forEach(p -> builder.suggest(p.label()));
       return builder.buildFuture();
    }
 
@@ -140,6 +153,44 @@ public final class CustomNameCommands {
       return 1;
    }
 
+   private static int setEmblem(CommandContext<FabricClientCommandSource> ctx) {
+      String id = StringArgumentType.getString(ctx, "emblem");
+      Optional<EmblemPresets.EmblemPreset> preset = EmblemPresets.get(id);
+      if (preset.isEmpty()) {
+         ((FabricClientCommandSource)ctx.getSource()).sendError(Component.literal("Unknown emblem '" + id + "'. Use /emblem list"));
+         return 0;
+      } else {
+         NameConfig config = NameConfig.get();
+         config.emblem = preset.get().format();
+         config.emblemId = preset.get().id();
+         config.enabled = true;
+         NameConfig.save();
+         MutableComponent msg = Component.literal("Emblem set to ")
+            .withStyle(ChatFormatting.GRAY)
+            .append(ColorCodes.parse(preset.get().format()))
+            .append(Component.literal(" \u2014 preview: ").withStyle(ChatFormatting.DARK_GRAY))
+            .append(DisplayNameBuilder.buildForLocalPlayer());
+         ((FabricClientCommandSource)ctx.getSource()).sendFeedback(msg);
+         return 1;
+      }
+   }
+
+   private static int listEmblems(CommandContext<FabricClientCommandSource> ctx) {
+      ((FabricClientCommandSource)ctx.getSource()).sendFeedback(Component.literal("Emblems:").withStyle(ChatFormatting.GOLD));
+
+      for (EmblemPresets.EmblemPreset preset : EmblemPresets.all().values()) {
+         ((FabricClientCommandSource)ctx.getSource())
+            .sendFeedback(
+               Component.literal("  /emblem " + preset.id() + "  ")
+                  .withStyle(ChatFormatting.GRAY)
+                  .append(ColorCodes.parse(preset.format()))
+                  .append(Component.literal(" \u2014 " + preset.label() + " (" + preset.category() + ")").withStyle(ChatFormatting.DARK_GRAY))
+            );
+      }
+
+      return 1;
+   }
+
    private static int clear(CommandContext<FabricClientCommandSource> ctx) {
       NameConfig.get().clear();
       ((FabricClientCommandSource)ctx.getSource()).sendFeedback(Component.literal("Custom name and rank cleared.").withStyle(ChatFormatting.GREEN));
@@ -182,7 +233,9 @@ public final class CustomNameCommands {
 
    private static int help(CommandContext<FabricClientCommandSource> ctx) {
       ((FabricClientCommandSource)ctx.getSource())
-         .sendFeedback(Component.literal("  /customname gui  \u2014 open the name + cape menu").withStyle(ChatFormatting.GRAY));
+         .sendFeedback(Component.literal("  /customname gui  \u2014 open the name + emblem + cape menu").withStyle(ChatFormatting.GRAY));
+      ((FabricClientCommandSource)ctx.getSource())
+         .sendFeedback(Component.literal("  /emblem <id>    \u2014 set a SkyBlock emblem (chat + tab + name tag)").withStyle(ChatFormatting.GRAY));
       ((FabricClientCommandSource)ctx.getSource()).sendFeedback(Component.literal("Keybind: N  (cape tab: K)").withStyle(ChatFormatting.DARK_GRAY));
       return 1;
    }
