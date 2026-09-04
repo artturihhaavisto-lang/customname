@@ -34,6 +34,15 @@ public final class NameStyler {
 		);
 	}
 
+	/** The chosen SkyBlock emblem glyph, coloured by its preset, or empty when none is set. */
+	public static MutableComponent emblem(NameConfig config, boolean animated) {
+		if (config.emblem == null || config.emblem.isBlank()) {
+			return Component.empty();
+		}
+
+		return ColorCodes.parse(config.emblem);
+	}
+
 	public static MutableComponent name(String realUsername, NameConfig config, boolean animated) {
 		String fallback = realUsername == null ? "" : realUsername;
 		if (!config.enabled) {
@@ -84,6 +93,12 @@ public final class NameStyler {
 		}
 
 		out.append(name(realUsername, config, animated));
+		MutableComponent emblem = emblem(config, animated);
+		if (!emblem.getString().isEmpty()) {
+			out.append(Component.literal(" "));
+			out.append(emblem);
+		}
+
 		return out;
 	}
 

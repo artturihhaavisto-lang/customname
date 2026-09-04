@@ -61,8 +61,12 @@ public final class NameTagFromTab {
 		String username = Identity.username();
 		NameConfig config = NameConfig.get();
 		Component base = raw;
+		// Emblems are a SkyBlock cosmetic; only synthesise a header for one when
+		// actually in SkyBlock (otherwise the own name tag would be rebuilt even
+		// though the emblem is never shown outside SkyBlock).
+		boolean emblemSpoof = config.hasEmblemSpoof() && LineRewriter.inSkyblock();
 		if (base == null && username != null
-			&& (config.hasCustomDisplay() || config.hasRankSpoof() || config.hasLevelSpoof())) {
+			&& (config.hasCustomDisplay() || config.hasRankSpoof() || config.hasLevelSpoof() || emblemSpoof)) {
 			// 1.3.4/1.3.5 field logs showed the server never sends a tab-list
 			// display name for the player's OWN entry (fallback fired for whole
 			// sessions, the self branch never ran), so building the own tag
@@ -79,7 +83,7 @@ public final class NameTagFromTab {
 
 		Component rewritten = username == null
 			? null
-			: LineRewriter.rewriteChat(base, username, config);
+			: LineRewriter.rewriteChat(base, username, config, true);
 		Component out = rewritten != null ? rewritten : base;
 		debugNametag("self",
 			"src", raw == null ? "synth" : "tab",

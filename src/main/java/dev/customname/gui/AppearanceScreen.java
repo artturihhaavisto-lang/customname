@@ -3,6 +3,7 @@ package dev.customname.gui;
 import dev.customcape.CapeFilePicker;
 import dev.customcape.CapeManager;
 import dev.customcape.CapeTextureManager;
+import dev.customname.config.EmblemPresets;
 import dev.customname.config.NameConfig;
 import dev.customname.config.RankPresets;
 import dev.customname.util.ChatRewriter;
@@ -92,7 +93,12 @@ public class AppearanceScreen extends Screen {
       );
       this.addRenderableWidget(
          new GlassButton(
-            x + 130, y, 48, 16, Component.literal("cape"), () -> this.tab == AppearanceScreen.Tab.CAPE, () -> this.switchTab(AppearanceScreen.Tab.CAPE)
+            x + 130, y, 48, 16, Component.literal("emblem"), () -> this.tab == AppearanceScreen.Tab.EMBLEM, () -> this.switchTab(AppearanceScreen.Tab.EMBLEM)
+         )
+      );
+      this.addRenderableWidget(
+         new GlassButton(
+            x + 182, y, 48, 16, Component.literal("cape"), () -> this.tab == AppearanceScreen.Tab.CAPE, () -> this.switchTab(AppearanceScreen.Tab.CAPE)
          )
       );
       this.addRenderableWidget(new BookButton(x + inner - 52 - 20, y, 16, 16, () -> false, this::openGuide));
@@ -100,13 +106,15 @@ public class AppearanceScreen extends Screen {
       y = this.panelTop + 36;
       if (this.tab == AppearanceScreen.Tab.NAME) {
          this.initName(x, y, inner);
+      } else if (this.tab == AppearanceScreen.Tab.EMBLEM) {
+         this.initEmblem(x, y, inner);
       } else {
          this.initCape(x, y, inner);
       }
 
-      if (this.tab == AppearanceScreen.Tab.NAME) {
+      if (this.tab == AppearanceScreen.Tab.NAME || this.tab == AppearanceScreen.Tab.EMBLEM) {
          this.refreshPreview();
-         if (this.nameBox != null) {
+         if (this.tab == AppearanceScreen.Tab.NAME && this.nameBox != null) {
             this.setInitialFocus(this.nameBox);
          }
       }
@@ -284,6 +292,41 @@ public class AppearanceScreen extends Screen {
       });
       list.updateSizeAndPosition(listW, listH, this.splitX + 4, listTop);
       this.addRenderableWidget(list);
+   }
+
+   private void initEmblem(int x, int y, int inner) {
+      this.previewTop = y;
+      this.addRenderableWidget(new StringWidget(x, y + 2, 36, 10, fieldLabel("chat"), this.font));
+      this.previewWidget = (StringWidget)this.addRenderableWidget(new StringWidget(x + 40, y, inner - 40, 12, Component.literal("\u2026"), this.font));
+      this.addRenderableWidget(new StringWidget(x, y + 16, 36, 10, fieldLabel("tab"), this.font));
+      this.skyblockWidget = (StringWidget)this.addRenderableWidget(new StringWidget(x + 40, y + 14, inner - 40, 12, Component.literal("\u2026"), this.font));
+      y += 40;
+      this.bodyTop = y;
+      this.splitX = 0;
+      // Dedicated footer band for clear — nothing else may enter it.
+      int footerTop = this.panelTop + PANEL_H - 26;
+      this.addRenderableWidget(new StringWidget(x, y + 2, 160, 10, fieldLabel("Pick an emblem"), this.font));
+      y += 14;
+      int listTop = y;
+      int listH = Math.max(40, footerTop - 6 - listTop);
+      EmblemPickList list = new EmblemPickList(this.minecraft, inner, listH, listTop, this.draft, new EmblemPickList.Listener() {
+         {
+            Objects.requireNonNull(AppearanceScreen.this);
+         }
+
+         @Override
+         public void onSelectNone() {
+            AppearanceScreen.this.applyEmblem(null);
+         }
+
+         @Override
+         public void onSelectEmblem(EmblemPresets.EmblemPreset preset) {
+            AppearanceScreen.this.applyEmblem(preset);
+         }
+      });
+      list.updateSizeAndPosition(inner, listH, x, listTop);
+      this.addRenderableWidget(list);
+      this.addRenderableWidget(new GlassButton(x, footerTop, 56, 16, Component.literal("clear"), () -> false, this::clearName));
    }
 
    private void styleChipRow(int x, int y, boolean name) {
@@ -551,6 +594,12 @@ public class AppearanceScreen extends Screen {
       this.refreshPreview();
    }
 
+   private void applyEmblem(EmblemPresets.EmblemPreset preset) {
+      this.draft.emblem = preset == null ? "" : preset.format();
+      this.draft.emblemId = preset == null ? "" : preset.id();
+      this.refreshPreview();
+   }
+
    private void applySaved(NameConfig.SavedPrefix saved) {
       this.draft.prefix = saved.prefix;
       this.draft.presetId = NameConfig.savedPresetId(saved.id);
@@ -601,6 +650,8 @@ public class AppearanceScreen extends Screen {
       this.draft.nameColor = "";
       this.draft.prefix = "";
       this.draft.presetId = "";
+      this.draft.emblem = "";
+      this.draft.emblemId = "";
       this.draft.nameChroma = false;
       this.draft.prefixChroma = false;
       this.draft.nameBold = false;
@@ -657,13 +708,18 @@ public class AppearanceScreen extends Screen {
 
          skyblock.append(Component.literal(" "));
          skyblock.append(DisplayNameBuilder.buildNameOnly(real, this.draft));
+         if (this.draft.emblem != null && !this.draft.emblem.isBlank()) {
+            skyblock.append(Component.literal(" "));
+            skyblock.append(ColorCodes.parse(this.draft.emblem));
+         }
+
          this.skyblockWidget.setMessage(skyblock);
       }
    }
 
    public void tick() {
       super.tick();
-      if (this.tab == AppearanceScreen.Tab.NAME) {
+      if (this.tab == AppearanceScreen.Tab.NAME || this.tab == AppearanceScreen.Tab.EMBLEM) {
          this.refreshPreview();
       }
    }
@@ -759,6 +815,7 @@ public class AppearanceScreen extends Screen {
 
    public static enum Tab {
       NAME,
+      EMBLEM,
       CAPE;
 
       private Tab() {

@@ -28,6 +28,8 @@ public final class NameConfig {
    public String nameColor = "";
    public String prefix = "";
    public String presetId = "";
+   public String emblem = "";
+   public String emblemId = "";
    public boolean enabled = true;
    public boolean nameChroma = false;
    public boolean nameMatchesRankColor = false;
@@ -116,6 +118,14 @@ public boolean replaceLevelWithPrefix = false;
 
       if (this.presetId == null) {
          this.presetId = "";
+      }
+
+      if (this.emblem == null) {
+         this.emblem = "";
+      }
+
+      if (this.emblemId == null) {
+         this.emblemId = "";
       }
 
       if (this.nameChromaStart == null) {
@@ -237,8 +247,12 @@ public boolean replaceLevelWithPrefix = false;
       return this.spoofSkyblockLevel && TabDisplayRewriter.formatLevel(this.spoofSkyblockLevelValue) != null;
    }
 
+   public boolean hasEmblemSpoof() {
+      return this.emblem != null && !this.emblem.isBlank();
+   }
+
    public boolean hasHypixelSpoof() {
-      return this.hasRankSpoof() || this.hasLevelSpoof();
+      return this.hasRankSpoof() || this.hasLevelSpoof() || this.hasEmblemSpoof();
    }
 
    public static void invalidateDisplayCaches() {
@@ -248,6 +262,8 @@ public boolean replaceLevelWithPrefix = false;
 
    public void clear() {
       this.name = this.nameColor = this.prefix = this.presetId = "";
+      this.emblem = "";
+      this.emblemId = "";
       this.nameChroma = this.prefixChroma = false;
       this.nameMatchesRankColor = false;
       this.showRankInTab = false;
@@ -281,6 +297,8 @@ this.replaceLevelWithPrefix = false;
       this.nameColor = other.nameColor != null ? other.nameColor : "";
       this.prefix = other.prefix != null ? other.prefix : "";
       this.presetId = other.presetId != null ? other.presetId : "";
+      this.emblem = other.emblem != null ? other.emblem : "";
+      this.emblemId = other.emblemId != null ? other.emblemId : "";
       this.enabled = other.enabled;
       this.nameChroma = other.nameChroma;
       this.nameMatchesRankColor = other.nameMatchesRankColor;
